@@ -14,10 +14,83 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for AccountStatus.
+const (
+	AccountStatusACTIVE   AccountStatus = "ACTIVE"
+	AccountStatusINACTIVE AccountStatus = "INACTIVE"
+	AccountStatusPENDING  AccountStatus = "PENDING"
+)
+
+// Valid indicates whether the value is a known member of the AccountStatus enum.
+func (e AccountStatus) Valid() bool {
+	switch e {
+	case AccountStatusACTIVE:
+		return true
+	case AccountStatusINACTIVE:
+		return true
+	case AccountStatusPENDING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddLineRequestType.
+const (
+	AddLineRequestTypeDISCOUNT AddLineRequestType = "DISCOUNT"
+	AddLineRequestTypePENALTY  AddLineRequestType = "PENALTY"
+)
+
+// Valid indicates whether the value is a known member of the AddLineRequestType enum.
+func (e AddLineRequestType) Valid() bool {
+	switch e {
+	case AddLineRequestTypeDISCOUNT:
+		return true
+	case AddLineRequestTypePENALTY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BillDisplayStatus.
+const (
+	BillDisplayStatusDRAFT               BillDisplayStatus = "DRAFT"
+	BillDisplayStatusISSUED              BillDisplayStatus = "ISSUED"
+	BillDisplayStatusOVERDUE             BillDisplayStatus = "OVERDUE"
+	BillDisplayStatusPAID                BillDisplayStatus = "PAID"
+	BillDisplayStatusPENDINGVERIFICATION BillDisplayStatus = "PENDING_VERIFICATION"
+	BillDisplayStatusUNBILLED            BillDisplayStatus = "UNBILLED"
+)
+
+// Valid indicates whether the value is a known member of the BillDisplayStatus enum.
+func (e BillDisplayStatus) Valid() bool {
+	switch e {
+	case BillDisplayStatusDRAFT:
+		return true
+	case BillDisplayStatusISSUED:
+		return true
+	case BillDisplayStatusOVERDUE:
+		return true
+	case BillDisplayStatusPAID:
+		return true
+	case BillDisplayStatusPENDINGVERIFICATION:
+		return true
+	case BillDisplayStatusUNBILLED:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for HealthStatus.
 const (
@@ -34,6 +107,139 @@ func (e HealthStatus) Valid() bool {
 	}
 }
 
+// Defines values for InvoiceLineType.
+const (
+	InvoiceLineTypeDISCOUNT    InvoiceLineType = "DISCOUNT"
+	InvoiceLineTypeELECTRICITY InvoiceLineType = "ELECTRICITY"
+	InvoiceLineTypePENALTY     InvoiceLineType = "PENALTY"
+	InvoiceLineTypeRECURRING   InvoiceLineType = "RECURRING"
+	InvoiceLineTypeRENT        InvoiceLineType = "RENT"
+	InvoiceLineTypeWATER       InvoiceLineType = "WATER"
+)
+
+// Valid indicates whether the value is a known member of the InvoiceLineType enum.
+func (e InvoiceLineType) Valid() bool {
+	switch e {
+	case InvoiceLineTypeDISCOUNT:
+		return true
+	case InvoiceLineTypeELECTRICITY:
+		return true
+	case InvoiceLineTypePENALTY:
+		return true
+	case InvoiceLineTypeRECURRING:
+		return true
+	case InvoiceLineTypeRENT:
+		return true
+	case InvoiceLineTypeWATER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Role.
+const (
+	RoleADMIN  Role = "ADMIN"
+	RoleTENANT Role = "TENANT"
+)
+
+// Valid indicates whether the value is a known member of the Role enum.
+func (e Role) Valid() bool {
+	switch e {
+	case RoleADMIN:
+		return true
+	case RoleTENANT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RoomStatus.
+const (
+	RoomStatusOCCUPIED RoomStatus = "OCCUPIED"
+	RoomStatusVACANT   RoomStatus = "VACANT"
+)
+
+// Valid indicates whether the value is a known member of the RoomStatus enum.
+func (e RoomStatus) Valid() bool {
+	switch e {
+	case RoomStatusOCCUPIED:
+		return true
+	case RoomStatusVACANT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UtilityType.
+const (
+	UtilityTypeELECTRICITY UtilityType = "ELECTRICITY"
+	UtilityTypeWATER       UtilityType = "WATER"
+)
+
+// Valid indicates whether the value is a known member of the UtilityType enum.
+func (e UtilityType) Valid() bool {
+	switch e {
+	case UtilityTypeELECTRICITY:
+		return true
+	case UtilityTypeWATER:
+		return true
+	default:
+		return false
+	}
+}
+
+// AbnormalUsage defines model for AbnormalUsage.
+type AbnormalUsage struct {
+	Electricity UsageCheck `json:"electricity"`
+	Water       UsageCheck `json:"water"`
+}
+
+// AccountStatus defines model for AccountStatus.
+type AccountStatus string
+
+// AddLineRequest defines model for AddLineRequest.
+type AddLineRequest struct {
+	// Amount Example: 4512.00
+	Amount      Money              `json:"amount"`
+	Description string             `json:"description"`
+	Type        AddLineRequestType `json:"type"`
+}
+
+// AddLineRequestType defines model for AddLineRequest.Type.
+type AddLineRequestType string
+
+// AssignRoomRequest defines model for AssignRoomRequest.
+type AssignRoomRequest struct {
+	RoomNumber string `json:"roomNumber"`
+}
+
+// BillDisplayStatus Computed by the backend from the stored status, slips and due date
+type BillDisplayStatus string
+
+// BillingPeriod Example: 2026-11
+type BillingPeriod = string
+
+// CreateRecurringChargeRequest defines model for CreateRecurringChargeRequest.
+type CreateRecurringChargeRequest struct {
+	Active *bool `json:"active,omitempty"`
+
+	// Amount Example: 4512.00
+	Amount Money  `json:"amount"`
+	Name   string `json:"name"`
+}
+
+// CreateUtilityRateRequest defines model for CreateUtilityRateRequest.
+type CreateUtilityRateRequest struct {
+	EffectiveFrom openapi_types.Date `json:"effectiveFrom"`
+
+	// PerUnit Example: 4512.00
+	PerUnit     Money       `json:"perUnit"`
+	UtilityType UtilityType `json:"utilityType"`
+}
+
 // Health defines model for Health.
 type Health struct {
 	Status HealthStatus `json:"status"`
@@ -41,6 +247,105 @@ type Health struct {
 
 // HealthStatus defines model for Health.Status.
 type HealthStatus string
+
+// Invoice defines model for Invoice.
+type Invoice struct {
+	AbnormalUsage AbnormalUsage `json:"abnormalUsage"`
+
+	// BillingPeriod Example: 2026-11
+	BillingPeriod BillingPeriod      `json:"billingPeriod"`
+	CreatedAt     time.Time          `json:"createdAt"`
+	DueDate       openapi_types.Date `json:"dueDate"`
+	Electricity   MeterDetail        `json:"electricity"`
+	Id            openapi_types.UUID `json:"id"`
+
+	// InvoiceNumber Example: INV-202611-302
+	InvoiceNumber string        `json:"invoiceNumber"`
+	IssuedAt      *time.Time    `json:"issuedAt,omitempty"`
+	Lines         []InvoiceLine `json:"lines"`
+	PaidAt        *time.Time    `json:"paidAt,omitempty"`
+	RoomNumber    string        `json:"roomNumber"`
+
+	// Status Computed by the backend from the stored status, slips and due date
+	Status BillDisplayStatus `json:"status"`
+
+	// Total Example: 4512.00
+	Total Money       `json:"total"`
+	Water MeterDetail `json:"water"`
+}
+
+// InvoiceLine defines model for InvoiceLine.
+type InvoiceLine struct {
+	// Amount Example: 4512.00
+	Amount      Money  `json:"amount"`
+	Description string `json:"description"`
+
+	// Id Present on DISCOUNT and PENALTY lines, which can be removed while DRAFT
+	Id   *openapi_types.UUID `json:"id,omitempty"`
+	Type InvoiceLineType     `json:"type"`
+}
+
+// InvoiceLineType defines model for InvoiceLineType.
+type InvoiceLineType string
+
+// Lease defines model for Lease.
+type Lease struct {
+	EndDate    openapi_types.Date `json:"endDate"`
+	Id         openapi_types.UUID `json:"id"`
+	StartDate  openapi_types.Date `json:"startDate"`
+	TenantName string             `json:"tenantName"`
+}
+
+// LeaseRequest defines model for LeaseRequest.
+type LeaseRequest struct {
+	EndDate    openapi_types.Date `json:"endDate"`
+	StartDate  openapi_types.Date `json:"startDate"`
+	TenantName string             `json:"tenantName"`
+}
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
+}
+
+// Me defines model for Me.
+type Me struct {
+	FullName *string            `json:"fullName,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	Role     Role               `json:"role"`
+
+	// RoomNumber Only for ACTIVE tenants
+	RoomNumber *string        `json:"roomNumber,omitempty"`
+	Status     *AccountStatus `json:"status,omitempty"`
+	Username   string         `json:"username"`
+}
+
+// MeterDetail defines model for MeterDetail.
+type MeterDetail struct {
+	CurrentReading *int64 `json:"currentReading,omitempty"`
+	MeterDigits    int    `json:"meterDigits"`
+
+	// PreviousReading Defaults to the latest issued invoice's reading (INV-8); absent on a room's first invoice until entered
+	PreviousReading *int64 `json:"previousReading,omitempty"`
+
+	// RatePerUnit Example: 4512.00
+	RatePerUnit       Money  `json:"ratePerUnit"`
+	RolloverConfirmed bool   `json:"rolloverConfirmed"`
+	Units             *int64 `json:"units,omitempty"`
+}
+
+// MeterInput defines model for MeterInput.
+type MeterInput struct {
+	CurrentReading int64 `json:"currentReading"`
+
+	// PreviousReading Override the previous reading, e.g. after a meter replacement (audited)
+	PreviousReading   *int64 `json:"previousReading,omitempty"`
+	RolloverConfirmed *bool  `json:"rolloverConfirmed,omitempty"`
+}
+
+// Money Example: 4512.00
+type Money = string
 
 // Problem defines model for Problem.
 type Problem struct {
@@ -53,11 +358,310 @@ type Problem struct {
 	Type      string  `json:"type"`
 }
 
+// RecurringCharge defines model for RecurringCharge.
+type RecurringCharge struct {
+	// Active Included in new invoices when true
+	Active bool `json:"active"`
+
+	// Amount Example: 4512.00
+	Amount Money              `json:"amount"`
+	Id     openapi_types.UUID `json:"id"`
+	Name   string             `json:"name"`
+}
+
+// RegisterTenantRequest defines model for RegisterTenantRequest.
+type RegisterTenantRequest struct {
+	FullName string `json:"fullName"`
+
+	// Password 8–128 characters
+	Password string `json:"password"`
+
+	// Phone 9–10 digits
+	Phone string `json:"phone"`
+
+	// Username 3–32 characters, a–z 0–9 . _ -
+	Username string `json:"username"`
+}
+
+// ResetPasswordRequest defines model for ResetPasswordRequest.
+type ResetPasswordRequest struct {
+	Password string `json:"password"`
+}
+
+// Role defines model for Role.
+type Role string
+
+// Room defines model for Room.
+type Room struct {
+	Account     *RoomAccount `json:"account,omitempty"`
+	ActiveLease *Lease       `json:"activeLease,omitempty"`
+
+	// BasePrice Example: 4512.00
+	BasePrice           Money  `json:"basePrice"`
+	ElectricMeterDigits *int   `json:"electricMeterDigits,omitempty"`
+	Floor               int    `json:"floor"`
+	RoomNumber          string `json:"roomNumber"`
+
+	// Status OCCUPIED when a lease is in effect today
+	Status           RoomStatus `json:"status"`
+	WaterMeterDigits *int       `json:"waterMeterDigits,omitempty"`
+}
+
+// RoomAccount defines model for RoomAccount.
+type RoomAccount struct {
+	FullName     string             `json:"fullName"`
+	Id           openapi_types.UUID `json:"id"`
+	Phone        string             `json:"phone"`
+	RegisteredAt time.Time          `json:"registeredAt"`
+	Username     string             `json:"username"`
+}
+
+// RoomDetail defines model for RoomDetail.
+type RoomDetail struct {
+	Account     *RoomAccount `json:"account,omitempty"`
+	ActiveLease *Lease       `json:"activeLease,omitempty"`
+
+	// BasePrice Example: 4512.00
+	BasePrice           Money             `json:"basePrice"`
+	ElectricMeterDigits *int              `json:"electricMeterDigits,omitempty"`
+	Floor               int               `json:"floor"`
+	Leases              []Lease           `json:"leases"`
+	RecurringCharges    []RecurringCharge `json:"recurringCharges"`
+	RoomNumber          string            `json:"roomNumber"`
+
+	// Status OCCUPIED when a lease is in effect today
+	Status           RoomStatus `json:"status"`
+	WaterMeterDigits *int       `json:"waterMeterDigits,omitempty"`
+}
+
+// RoomStatus OCCUPIED when a lease is in effect today
+type RoomStatus string
+
+// SetMetersRequest defines model for SetMetersRequest.
+type SetMetersRequest struct {
+	Electricity *MeterInput `json:"electricity,omitempty"`
+	Water       *MeterInput `json:"water,omitempty"`
+}
+
+// TenantAccount defines model for TenantAccount.
+type TenantAccount struct {
+	FullName     string             `json:"fullName"`
+	Id           openapi_types.UUID `json:"id"`
+	Phone        string             `json:"phone"`
+	RegisteredAt time.Time          `json:"registeredAt"`
+	RoomNumber   *string            `json:"roomNumber,omitempty"`
+	Status       AccountStatus      `json:"status"`
+	UnassignedAt *time.Time         `json:"unassignedAt,omitempty"`
+	Username     string             `json:"username"`
+}
+
+// TenantRoom defines model for TenantRoom.
+type TenantRoom struct {
+	ActiveLease *Lease `json:"activeLease,omitempty"`
+	Floor       int    `json:"floor"`
+	RoomNumber  string `json:"roomNumber"`
+}
+
+// UpdateRecurringChargeRequest defines model for UpdateRecurringChargeRequest.
+type UpdateRecurringChargeRequest struct {
+	Active *bool `json:"active,omitempty"`
+
+	// Amount Example: 4512.00
+	Amount *Money  `json:"amount,omitempty"`
+	Name   *string `json:"name,omitempty"`
+}
+
+// UpdateRoomRequest defines model for UpdateRoomRequest.
+type UpdateRoomRequest struct {
+	// BasePrice Example: 4512.00
+	BasePrice           *Money `json:"basePrice,omitempty"`
+	ElectricMeterDigits *int   `json:"electricMeterDigits,omitempty"`
+	WaterMeterDigits    *int   `json:"waterMeterDigits,omitempty"`
+}
+
+// UsageCheck defines model for UsageCheck.
+type UsageCheck struct {
+	// Abnormal Units are more than double the 3-month average (M-03). Warning only.
+	Abnormal         bool   `json:"abnormal"`
+	PercentOfAverage *int64 `json:"percentOfAverage,omitempty"`
+}
+
+// UtilityRate defines model for UtilityRate.
+type UtilityRate struct {
+	CreatedAt     time.Time          `json:"createdAt"`
+	EffectiveFrom openapi_types.Date `json:"effectiveFrom"`
+	Id            openapi_types.UUID `json:"id"`
+
+	// PerUnit Example: 4512.00
+	PerUnit     Money       `json:"perUnit"`
+	UtilityType UtilityType `json:"utilityType"`
+}
+
+// UtilityRates defines model for UtilityRates.
+type UtilityRates struct {
+	Electricity UtilityRate `json:"electricity"`
+
+	// History All rates, newest effective date first
+	History []UtilityRate `json:"history"`
+	Water   UtilityRate   `json:"water"`
+}
+
+// UtilityType defines model for UtilityType.
+type UtilityType string
+
+// AccountId defines model for AccountId.
+type AccountId = openapi_types.UUID
+
+// ChargeId defines model for ChargeId.
+type ChargeId = openapi_types.UUID
+
+// InvoiceId defines model for InvoiceId.
+type InvoiceId = openapi_types.UUID
+
+// LeaseId defines model for LeaseId.
+type LeaseId = openapi_types.UUID
+
+// Period Example: 2026-11
+type Period = BillingPeriod
+
+// RoomNumber defines model for RoomNumber.
+type RoomNumber = string
+
+// LoggedIn defines model for LoggedIn.
+type LoggedIn = Me
+
+// ListRoomsParams defines parameters for ListRooms.
+type ListRoomsParams struct {
+	Floor *int `form:"floor,omitempty" json:"floor,omitempty"`
+}
+
+// ListTenantAccountsParams defines parameters for ListTenantAccounts.
+type ListTenantAccountsParams struct {
+	Status *AccountStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// AddInvoiceLineJSONRequestBody defines body for AddInvoiceLine for application/json ContentType.
+type AddInvoiceLineJSONRequestBody = AddLineRequest
+
+// SetInvoiceMetersJSONRequestBody defines body for SetInvoiceMeters for application/json ContentType.
+type SetInvoiceMetersJSONRequestBody = SetMetersRequest
+
+// UpdateLeaseJSONRequestBody defines body for UpdateLease for application/json ContentType.
+type UpdateLeaseJSONRequestBody = LeaseRequest
+
+// UpdateRecurringChargeJSONRequestBody defines body for UpdateRecurringCharge for application/json ContentType.
+type UpdateRecurringChargeJSONRequestBody = UpdateRecurringChargeRequest
+
+// UpdateRoomJSONRequestBody defines body for UpdateRoom for application/json ContentType.
+type UpdateRoomJSONRequestBody = UpdateRoomRequest
+
+// CreateLeaseJSONRequestBody defines body for CreateLease for application/json ContentType.
+type CreateLeaseJSONRequestBody = LeaseRequest
+
+// CreateRecurringChargeJSONRequestBody defines body for CreateRecurringCharge for application/json ContentType.
+type CreateRecurringChargeJSONRequestBody = CreateRecurringChargeRequest
+
+// AssignRoomJSONRequestBody defines body for AssignRoom for application/json ContentType.
+type AssignRoomJSONRequestBody = AssignRoomRequest
+
+// ResetTenantPasswordJSONRequestBody defines body for ResetTenantPassword for application/json ContentType.
+type ResetTenantPasswordJSONRequestBody = ResetPasswordRequest
+
+// CreateUtilityRateJSONRequestBody defines body for CreateUtilityRate for application/json ContentType.
+type CreateUtilityRateJSONRequestBody = CreateUtilityRateRequest
+
+// AdminLoginJSONRequestBody defines body for AdminLogin for application/json ContentType.
+type AdminLoginJSONRequestBody = LoginRequest
+
+// TenantLoginJSONRequestBody defines body for TenantLogin for application/json ContentType.
+type TenantLoginJSONRequestBody = LoginRequest
+
+// RegisterTenantJSONRequestBody defines body for RegisterTenant for application/json ContentType.
+type RegisterTenantJSONRequestBody = RegisterTenantRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetRoomInvoice The invoice of a room for a billing period (P-A04); 404 if not created yet
+	// (GET /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
+	GetRoomInvoice(c *gin.Context, period Period, roomNumber RoomNumber)
+	// CreateInvoiceDraft Create a draft, snapshotting rent, rates and recurring charges (INV-4)
+	// (POST /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
+	CreateInvoiceDraft(c *gin.Context, period Period, roomNumber RoomNumber)
+
+	// (GET /admin/invoices/{invoiceId})
+	GetInvoice(c *gin.Context, invoiceId InvoiceId)
+	// IssueInvoice Send the invoice to the tenant (M-01). It can no longer be edited.
+	// (POST /admin/invoices/{invoiceId}/issue)
+	IssueInvoice(c *gin.Context, invoiceId InvoiceId)
+	// AddInvoiceLine Add a discount (negative) or penalty (positive) line (DRAFT only)
+	// (POST /admin/invoices/{invoiceId}/lines)
+	AddInvoiceLine(c *gin.Context, invoiceId InvoiceId)
+	// RemoveInvoiceLine Remove a discount or penalty line (DRAFT only)
+	// (DELETE /admin/invoices/{invoiceId}/lines/{lineId})
+	RemoveInvoiceLine(c *gin.Context, invoiceId InvoiceId, lineId openapi_types.UUID)
+	// SetInvoiceMeters Enter meter readings (DRAFT only). Lower than previous requires rolloverConfirmed (M-02).
+	// (PATCH /admin/invoices/{invoiceId}/meters)
+	SetInvoiceMeters(c *gin.Context, invoiceId InvoiceId)
+	// UpdateLease Edit a lease (M-07)
+	// (PATCH /admin/leases/{leaseId})
+	UpdateLease(c *gin.Context, leaseId LeaseId)
+	// UpdateRecurringCharge Edit or switch a monthly service charge on/off (M-08)
+	// (PATCH /admin/recurring-charges/{chargeId})
+	UpdateRecurringCharge(c *gin.Context, chargeId ChargeId)
+	// ListRooms All rooms (P-A05). Not paginated.
+	// (GET /admin/rooms)
+	ListRooms(c *gin.Context, params ListRoomsParams)
+	// GetRoom Room detail (P-A06)
+	// (GET /admin/rooms/{roomNumber})
+	GetRoom(c *gin.Context, roomNumber RoomNumber)
+	// UpdateRoom Change rent or meter digits. Affects only drafts created afterwards (INV-4).
+	// (PATCH /admin/rooms/{roomNumber})
+	UpdateRoom(c *gin.Context, roomNumber RoomNumber)
+	// CreateLease Add a lease (M-07). Leases of a room may not overlap.
+	// (POST /admin/rooms/{roomNumber}/leases)
+	CreateLease(c *gin.Context, roomNumber RoomNumber)
+	// CreateRecurringCharge Add a monthly service charge (M-08)
+	// (POST /admin/rooms/{roomNumber}/recurring-charges)
+	CreateRecurringCharge(c *gin.Context, roomNumber RoomNumber)
+	// ListTenantAccounts Tenant accounts by status (P-A08 tabs)
+	// (GET /admin/tenant-accounts)
+	ListTenantAccounts(c *gin.Context, params ListTenantAccountsParams)
+	// AssignRoom Bind an account to a room (M-06). PENDING or INACTIVE → ACTIVE.
+	// (POST /admin/tenant-accounts/{accountId}/assign)
+	AssignRoom(c *gin.Context, accountId AccountId)
+	// ResetTenantPassword Admin sets a new password for a tenant; ends all its sessions
+	// (PUT /admin/tenant-accounts/{accountId}/password)
+	ResetTenantPassword(c *gin.Context, accountId AccountId)
+	// UnassignRoom Unbind an account when the tenant moves out. ACTIVE → INACTIVE; ends all its sessions.
+	// (POST /admin/tenant-accounts/{accountId}/unassign)
+	UnassignRoom(c *gin.Context, accountId AccountId)
+	// ListUtilityRates Current rates and full history (P-A12)
+	// (GET /admin/utility-rates)
+	ListUtilityRates(c *gin.Context)
+	// CreateUtilityRate Add a new rate (M-09). Append-only; must start after the latest rate of that type.
+	// (POST /admin/utility-rates)
+	CreateUtilityRate(c *gin.Context)
+	// AdminLogin Admin login (P-A01)
+	// (POST /auth/admin/login)
+	AdminLogin(c *gin.Context)
+	// Logout End the current session
+	// (POST /auth/logout)
+	Logout(c *gin.Context)
+	// GetMe The logged-in user
+	// (GET /auth/me)
+	GetMe(c *gin.Context)
+	// TenantLogin Tenant login. PENDING and INACTIVE accounts may log in but cannot see room data.
+	// (POST /auth/tenant/login)
+	TenantLogin(c *gin.Context)
+	// RegisterTenant Tenant self-registration; the account waits (PENDING) until the admin assigns a room
+	// (POST /auth/tenant/register)
+	RegisterTenant(c *gin.Context)
 	// GetHealth Liveness and database check
 	// (GET /health)
 	GetHealth(c *gin.Context)
+	// GetTenantRoom The room the logged-in tenant is bound to
+	// (GET /tenant/room)
+	GetTenantRoom(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -68,6 +672,578 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// GetRoomInvoice operation middleware
+func (siw *ServerInterfaceWrapper) GetRoomInvoice(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "period" -------------
+	var period Period
+
+	err = runtime.BindStyledParameterWithOptions("simple", "period", c.Param("period"), &period, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter period: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRoomInvoice(c, period, roomNumber)
+}
+
+// CreateInvoiceDraft operation middleware
+func (siw *ServerInterfaceWrapper) CreateInvoiceDraft(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "period" -------------
+	var period Period
+
+	err = runtime.BindStyledParameterWithOptions("simple", "period", c.Param("period"), &period, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter period: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateInvoiceDraft(c, period, roomNumber)
+}
+
+// GetInvoice operation middleware
+func (siw *ServerInterfaceWrapper) GetInvoice(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetInvoice(c, invoiceId)
+}
+
+// IssueInvoice operation middleware
+func (siw *ServerInterfaceWrapper) IssueInvoice(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.IssueInvoice(c, invoiceId)
+}
+
+// AddInvoiceLine operation middleware
+func (siw *ServerInterfaceWrapper) AddInvoiceLine(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddInvoiceLine(c, invoiceId)
+}
+
+// RemoveInvoiceLine operation middleware
+func (siw *ServerInterfaceWrapper) RemoveInvoiceLine(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "lineId" -------------
+	var lineId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "lineId", c.Param("lineId"), &lineId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter lineId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveInvoiceLine(c, invoiceId, lineId)
+}
+
+// SetInvoiceMeters operation middleware
+func (siw *ServerInterfaceWrapper) SetInvoiceMeters(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetInvoiceMeters(c, invoiceId)
+}
+
+// UpdateLease operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLease(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "leaseId" -------------
+	var leaseId LeaseId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "leaseId", c.Param("leaseId"), &leaseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter leaseId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateLease(c, leaseId)
+}
+
+// UpdateRecurringCharge operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRecurringCharge(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "chargeId" -------------
+	var chargeId ChargeId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "chargeId", c.Param("chargeId"), &chargeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter chargeId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateRecurringCharge(c, chargeId)
+}
+
+// ListRooms operation middleware
+func (siw *ServerInterfaceWrapper) ListRooms(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRoomsParams
+
+	// ------------- Optional query parameter "floor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "floor", c.Request.URL.Query(), &params.Floor, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter floor: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListRooms(c, params)
+}
+
+// GetRoom operation middleware
+func (siw *ServerInterfaceWrapper) GetRoom(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetRoom(c, roomNumber)
+}
+
+// UpdateRoom operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRoom(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateRoom(c, roomNumber)
+}
+
+// CreateLease operation middleware
+func (siw *ServerInterfaceWrapper) CreateLease(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateLease(c, roomNumber)
+}
+
+// CreateRecurringCharge operation middleware
+func (siw *ServerInterfaceWrapper) CreateRecurringCharge(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateRecurringCharge(c, roomNumber)
+}
+
+// ListTenantAccounts operation middleware
+func (siw *ServerInterfaceWrapper) ListTenantAccounts(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTenantAccountsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", c.Request.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter status: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTenantAccounts(c, params)
+}
+
+// AssignRoom operation middleware
+func (siw *ServerInterfaceWrapper) AssignRoom(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "accountId" -------------
+	var accountId AccountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "accountId", c.Param("accountId"), &accountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter accountId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AssignRoom(c, accountId)
+}
+
+// ResetTenantPassword operation middleware
+func (siw *ServerInterfaceWrapper) ResetTenantPassword(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "accountId" -------------
+	var accountId AccountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "accountId", c.Param("accountId"), &accountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter accountId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ResetTenantPassword(c, accountId)
+}
+
+// UnassignRoom operation middleware
+func (siw *ServerInterfaceWrapper) UnassignRoom(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "accountId" -------------
+	var accountId AccountId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "accountId", c.Param("accountId"), &accountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter accountId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UnassignRoom(c, accountId)
+}
+
+// ListUtilityRates operation middleware
+func (siw *ServerInterfaceWrapper) ListUtilityRates(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListUtilityRates(c)
+}
+
+// CreateUtilityRate operation middleware
+func (siw *ServerInterfaceWrapper) CreateUtilityRate(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateUtilityRate(c)
+}
+
+// AdminLogin operation middleware
+func (siw *ServerInterfaceWrapper) AdminLogin(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AdminLogin(c)
+}
+
+// Logout operation middleware
+func (siw *ServerInterfaceWrapper) Logout(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.Logout(c)
+}
+
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetMe(c)
+}
+
+// TenantLogin operation middleware
+func (siw *ServerInterfaceWrapper) TenantLogin(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.TenantLogin(c)
+}
+
+// RegisterTenant operation middleware
+func (siw *ServerInterfaceWrapper) RegisterTenant(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RegisterTenant(c)
+}
 
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
@@ -80,6 +1256,19 @@ func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 	}
 
 	siw.Handler.GetHealth(c)
+}
+
+// GetTenantRoom operation middleware
+func (siw *ServerInterfaceWrapper) GetTenantRoom(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTenantRoom(c)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -110,9 +1299,1032 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/health", wrapper.GetHealth)
+	router.POST(options.BaseURL+"/auth/admin/login", wrapper.AdminLogin)
+	router.POST(options.BaseURL+"/auth/tenant/login", wrapper.TenantLogin)
+	router.POST(options.BaseURL+"/auth/tenant/register", wrapper.RegisterTenant)
+	router.POST(options.BaseURL+"/auth/logout", wrapper.Logout)
+	router.GET(options.BaseURL+"/auth/me", wrapper.GetMe)
+	router.GET(options.BaseURL+"/admin/tenant-accounts", wrapper.ListTenantAccounts)
+	router.POST(options.BaseURL+"/admin/tenant-accounts/:accountId/assign", wrapper.AssignRoom)
+	router.POST(options.BaseURL+"/admin/tenant-accounts/:accountId/unassign", wrapper.UnassignRoom)
+	router.PUT(options.BaseURL+"/admin/tenant-accounts/:accountId/password", wrapper.ResetTenantPassword)
+	router.GET(options.BaseURL+"/admin/rooms", wrapper.ListRooms)
+	router.GET(options.BaseURL+"/admin/rooms/:roomNumber", wrapper.GetRoom)
+	router.PATCH(options.BaseURL+"/admin/rooms/:roomNumber", wrapper.UpdateRoom)
+	router.POST(options.BaseURL+"/admin/rooms/:roomNumber/leases", wrapper.CreateLease)
+	router.PATCH(options.BaseURL+"/admin/leases/:leaseId", wrapper.UpdateLease)
+	router.POST(options.BaseURL+"/admin/rooms/:roomNumber/recurring-charges", wrapper.CreateRecurringCharge)
+	router.PATCH(options.BaseURL+"/admin/recurring-charges/:chargeId", wrapper.UpdateRecurringCharge)
+	router.GET(options.BaseURL+"/tenant/room", wrapper.GetTenantRoom)
+	router.GET(options.BaseURL+"/admin/utility-rates", wrapper.ListUtilityRates)
+	router.POST(options.BaseURL+"/admin/utility-rates", wrapper.CreateUtilityRate)
+	router.GET(options.BaseURL+"/admin/billing-periods/:period/rooms/:roomNumber/invoice", wrapper.GetRoomInvoice)
+	router.POST(options.BaseURL+"/admin/billing-periods/:period/rooms/:roomNumber/invoice", wrapper.CreateInvoiceDraft)
+	router.GET(options.BaseURL+"/admin/invoices/:invoiceId", wrapper.GetInvoice)
+	router.PATCH(options.BaseURL+"/admin/invoices/:invoiceId/meters", wrapper.SetInvoiceMeters)
+	router.POST(options.BaseURL+"/admin/invoices/:invoiceId/lines", wrapper.AddInvoiceLine)
+	router.DELETE(options.BaseURL+"/admin/invoices/:invoiceId/lines/:lineId", wrapper.RemoveInvoiceLine)
+	router.POST(options.BaseURL+"/admin/invoices/:invoiceId/issue", wrapper.IssueInvoice)
+}
+
+type InvoiceJSONResponse Invoice
+
+type LoggedInResponseHeaders struct {
+	SetCookie *string
+}
+type LoggedInJSONResponse struct {
+	Body Me
+
+	Headers LoggedInResponseHeaders
 }
 
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type GetRoomInvoiceRequestObject struct {
+	Period     Period     `json:"period"`
+	RoomNumber RoomNumber `json:"roomNumber"`
+}
+
+type GetRoomInvoiceResponseObject interface {
+	VisitGetRoomInvoiceResponse(w http.ResponseWriter) error
+}
+
+type GetRoomInvoice200JSONResponse struct{ InvoiceJSONResponse }
+
+func (response GetRoomInvoice200JSONResponse) VisitGetRoomInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRoomInvoicedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetRoomInvoicedefaultApplicationProblemPlusJSONResponse) VisitGetRoomInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateInvoiceDraftRequestObject struct {
+	Period     Period     `json:"period"`
+	RoomNumber RoomNumber `json:"roomNumber"`
+}
+
+type CreateInvoiceDraftResponseObject interface {
+	VisitCreateInvoiceDraftResponse(w http.ResponseWriter) error
+}
+
+type CreateInvoiceDraft201JSONResponse struct{ InvoiceJSONResponse }
+
+func (response CreateInvoiceDraft201JSONResponse) VisitCreateInvoiceDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateInvoiceDraftdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateInvoiceDraftdefaultApplicationProblemPlusJSONResponse) VisitCreateInvoiceDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInvoiceRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+}
+
+type GetInvoiceResponseObject interface {
+	VisitGetInvoiceResponse(w http.ResponseWriter) error
+}
+
+type GetInvoice200JSONResponse struct{ InvoiceJSONResponse }
+
+func (response GetInvoice200JSONResponse) VisitGetInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInvoicedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetInvoicedefaultApplicationProblemPlusJSONResponse) VisitGetInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IssueInvoiceRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+}
+
+type IssueInvoiceResponseObject interface {
+	VisitIssueInvoiceResponse(w http.ResponseWriter) error
+}
+
+type IssueInvoice200JSONResponse struct{ InvoiceJSONResponse }
+
+func (response IssueInvoice200JSONResponse) VisitIssueInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IssueInvoicedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response IssueInvoicedefaultApplicationProblemPlusJSONResponse) VisitIssueInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddInvoiceLineRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+	Body      *AddInvoiceLineJSONRequestBody
+}
+
+type AddInvoiceLineResponseObject interface {
+	VisitAddInvoiceLineResponse(w http.ResponseWriter) error
+}
+
+type AddInvoiceLine201JSONResponse struct{ InvoiceJSONResponse }
+
+func (response AddInvoiceLine201JSONResponse) VisitAddInvoiceLineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddInvoiceLinedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AddInvoiceLinedefaultApplicationProblemPlusJSONResponse) VisitAddInvoiceLineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveInvoiceLineRequestObject struct {
+	InvoiceId InvoiceId          `json:"invoiceId"`
+	LineId    openapi_types.UUID `json:"lineId"`
+}
+
+type RemoveInvoiceLineResponseObject interface {
+	VisitRemoveInvoiceLineResponse(w http.ResponseWriter) error
+}
+
+type RemoveInvoiceLine200JSONResponse struct{ InvoiceJSONResponse }
+
+func (response RemoveInvoiceLine200JSONResponse) VisitRemoveInvoiceLineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveInvoiceLinedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RemoveInvoiceLinedefaultApplicationProblemPlusJSONResponse) VisitRemoveInvoiceLineResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetInvoiceMetersRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+	Body      *SetInvoiceMetersJSONRequestBody
+}
+
+type SetInvoiceMetersResponseObject interface {
+	VisitSetInvoiceMetersResponse(w http.ResponseWriter) error
+}
+
+type SetInvoiceMeters200JSONResponse struct{ InvoiceJSONResponse }
+
+func (response SetInvoiceMeters200JSONResponse) VisitSetInvoiceMetersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetInvoiceMetersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SetInvoiceMetersdefaultApplicationProblemPlusJSONResponse) VisitSetInvoiceMetersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLeaseRequestObject struct {
+	LeaseId LeaseId `json:"leaseId"`
+	Body    *UpdateLeaseJSONRequestBody
+}
+
+type UpdateLeaseResponseObject interface {
+	VisitUpdateLeaseResponse(w http.ResponseWriter) error
+}
+
+type UpdateLease200JSONResponse Lease
+
+func (response UpdateLease200JSONResponse) VisitUpdateLeaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLeasedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateLeasedefaultApplicationProblemPlusJSONResponse) VisitUpdateLeaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRecurringChargeRequestObject struct {
+	ChargeId ChargeId `json:"chargeId"`
+	Body     *UpdateRecurringChargeJSONRequestBody
+}
+
+type UpdateRecurringChargeResponseObject interface {
+	VisitUpdateRecurringChargeResponse(w http.ResponseWriter) error
+}
+
+type UpdateRecurringCharge200JSONResponse RecurringCharge
+
+func (response UpdateRecurringCharge200JSONResponse) VisitUpdateRecurringChargeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRecurringChargedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateRecurringChargedefaultApplicationProblemPlusJSONResponse) VisitUpdateRecurringChargeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRoomsRequestObject struct {
+	Params ListRoomsParams
+}
+
+type ListRoomsResponseObject interface {
+	VisitListRoomsResponse(w http.ResponseWriter) error
+}
+
+type ListRooms200JSONResponse []Room
+
+func (response ListRooms200JSONResponse) VisitListRoomsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRoomsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListRoomsdefaultApplicationProblemPlusJSONResponse) VisitListRoomsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRoomRequestObject struct {
+	RoomNumber RoomNumber `json:"roomNumber"`
+}
+
+type GetRoomResponseObject interface {
+	VisitGetRoomResponse(w http.ResponseWriter) error
+}
+
+type GetRoom200JSONResponse RoomDetail
+
+func (response GetRoom200JSONResponse) VisitGetRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRoomdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetRoomdefaultApplicationProblemPlusJSONResponse) VisitGetRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRoomRequestObject struct {
+	RoomNumber RoomNumber `json:"roomNumber"`
+	Body       *UpdateRoomJSONRequestBody
+}
+
+type UpdateRoomResponseObject interface {
+	VisitUpdateRoomResponse(w http.ResponseWriter) error
+}
+
+type UpdateRoom200JSONResponse RoomDetail
+
+func (response UpdateRoom200JSONResponse) VisitUpdateRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateRoomdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateRoomdefaultApplicationProblemPlusJSONResponse) VisitUpdateRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateLeaseRequestObject struct {
+	RoomNumber RoomNumber `json:"roomNumber"`
+	Body       *CreateLeaseJSONRequestBody
+}
+
+type CreateLeaseResponseObject interface {
+	VisitCreateLeaseResponse(w http.ResponseWriter) error
+}
+
+type CreateLease201JSONResponse Lease
+
+func (response CreateLease201JSONResponse) VisitCreateLeaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateLeasedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateLeasedefaultApplicationProblemPlusJSONResponse) VisitCreateLeaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateRecurringChargeRequestObject struct {
+	RoomNumber RoomNumber `json:"roomNumber"`
+	Body       *CreateRecurringChargeJSONRequestBody
+}
+
+type CreateRecurringChargeResponseObject interface {
+	VisitCreateRecurringChargeResponse(w http.ResponseWriter) error
+}
+
+type CreateRecurringCharge201JSONResponse RecurringCharge
+
+func (response CreateRecurringCharge201JSONResponse) VisitCreateRecurringChargeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateRecurringChargedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateRecurringChargedefaultApplicationProblemPlusJSONResponse) VisitCreateRecurringChargeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantAccountsRequestObject struct {
+	Params ListTenantAccountsParams
+}
+
+type ListTenantAccountsResponseObject interface {
+	VisitListTenantAccountsResponse(w http.ResponseWriter) error
+}
+
+type ListTenantAccounts200JSONResponse []TenantAccount
+
+func (response ListTenantAccounts200JSONResponse) VisitListTenantAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantAccountsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListTenantAccountsdefaultApplicationProblemPlusJSONResponse) VisitListTenantAccountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignRoomRequestObject struct {
+	AccountId AccountId `json:"accountId"`
+	Body      *AssignRoomJSONRequestBody
+}
+
+type AssignRoomResponseObject interface {
+	VisitAssignRoomResponse(w http.ResponseWriter) error
+}
+
+type AssignRoom200JSONResponse TenantAccount
+
+func (response AssignRoom200JSONResponse) VisitAssignRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignRoomdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AssignRoomdefaultApplicationProblemPlusJSONResponse) VisitAssignRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResetTenantPasswordRequestObject struct {
+	AccountId AccountId `json:"accountId"`
+	Body      *ResetTenantPasswordJSONRequestBody
+}
+
+type ResetTenantPasswordResponseObject interface {
+	VisitResetTenantPasswordResponse(w http.ResponseWriter) error
+}
+
+type ResetTenantPassword204Response struct {
+}
+
+func (response ResetTenantPassword204Response) VisitResetTenantPasswordResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ResetTenantPassworddefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ResetTenantPassworddefaultApplicationProblemPlusJSONResponse) VisitResetTenantPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnassignRoomRequestObject struct {
+	AccountId AccountId `json:"accountId"`
+}
+
+type UnassignRoomResponseObject interface {
+	VisitUnassignRoomResponse(w http.ResponseWriter) error
+}
+
+type UnassignRoom200JSONResponse TenantAccount
+
+func (response UnassignRoom200JSONResponse) VisitUnassignRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnassignRoomdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UnassignRoomdefaultApplicationProblemPlusJSONResponse) VisitUnassignRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUtilityRatesRequestObject struct {
+}
+
+type ListUtilityRatesResponseObject interface {
+	VisitListUtilityRatesResponse(w http.ResponseWriter) error
+}
+
+type ListUtilityRates200JSONResponse UtilityRates
+
+func (response ListUtilityRates200JSONResponse) VisitListUtilityRatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUtilityRatesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListUtilityRatesdefaultApplicationProblemPlusJSONResponse) VisitListUtilityRatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUtilityRateRequestObject struct {
+	Body *CreateUtilityRateJSONRequestBody
+}
+
+type CreateUtilityRateResponseObject interface {
+	VisitCreateUtilityRateResponse(w http.ResponseWriter) error
+}
+
+type CreateUtilityRate201JSONResponse UtilityRate
+
+func (response CreateUtilityRate201JSONResponse) VisitCreateUtilityRateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUtilityRatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateUtilityRatedefaultApplicationProblemPlusJSONResponse) VisitCreateUtilityRateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminLoginRequestObject struct {
+	Body *AdminLoginJSONRequestBody
+}
+
+type AdminLoginResponseObject interface {
+	VisitAdminLoginResponse(w http.ResponseWriter) error
+}
+
+type AdminLogin200JSONResponse struct{ LoggedInJSONResponse }
+
+func (response AdminLogin200JSONResponse) VisitAdminLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AdminLogindefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AdminLogindefaultApplicationProblemPlusJSONResponse) VisitAdminLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LogoutRequestObject struct {
+}
+
+type LogoutResponseObject interface {
+	VisitLogoutResponse(w http.ResponseWriter) error
+}
+
+type Logout204ResponseHeaders struct {
+	SetCookie *string
+}
+
+type Logout204Response struct {
+	Headers Logout204ResponseHeaders
+}
+
+func (response Logout204Response) VisitLogoutResponse(w http.ResponseWriter) error {
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(204)
+	return nil
+}
+
+type LogoutdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response LogoutdefaultApplicationProblemPlusJSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMeRequestObject struct {
+}
+
+type GetMeResponseObject interface {
+	VisitGetMeResponse(w http.ResponseWriter) error
+}
+
+type GetMe200JSONResponse Me
+
+func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMedefaultApplicationProblemPlusJSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TenantLoginRequestObject struct {
+	Body *TenantLoginJSONRequestBody
+}
+
+type TenantLoginResponseObject interface {
+	VisitTenantLoginResponse(w http.ResponseWriter) error
+}
+
+type TenantLogin200JSONResponse struct{ LoggedInJSONResponse }
+
+func (response TenantLogin200JSONResponse) VisitTenantLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TenantLogindefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response TenantLogindefaultApplicationProblemPlusJSONResponse) VisitTenantLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterTenantRequestObject struct {
+	Body *RegisterTenantJSONRequestBody
+}
+
+type RegisterTenantResponseObject interface {
+	VisitRegisterTenantResponse(w http.ResponseWriter) error
+}
+
+type RegisterTenant201JSONResponse TenantAccount
+
+func (response RegisterTenant201JSONResponse) VisitRegisterTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterTenantdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RegisterTenantdefaultApplicationProblemPlusJSONResponse) VisitRegisterTenantResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetHealthRequestObject struct {
 }
@@ -152,11 +2364,127 @@ func (response GetHealthdefaultApplicationProblemPlusJSONResponse) VisitGetHealt
 	return err
 }
 
+type GetTenantRoomRequestObject struct {
+}
+
+type GetTenantRoomResponseObject interface {
+	VisitGetTenantRoomResponse(w http.ResponseWriter) error
+}
+
+type GetTenantRoom200JSONResponse TenantRoom
+
+func (response GetTenantRoom200JSONResponse) VisitGetTenantRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantRoomdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTenantRoomdefaultApplicationProblemPlusJSONResponse) VisitGetTenantRoomResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetRoomInvoice The invoice of a room for a billing period (P-A04); 404 if not created yet
+	// (GET /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
+	GetRoomInvoice(ctx context.Context, request GetRoomInvoiceRequestObject) (GetRoomInvoiceResponseObject, error)
+	// CreateInvoiceDraft Create a draft, snapshotting rent, rates and recurring charges (INV-4)
+	// (POST /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
+	CreateInvoiceDraft(ctx context.Context, request CreateInvoiceDraftRequestObject) (CreateInvoiceDraftResponseObject, error)
+
+	// (GET /admin/invoices/{invoiceId})
+	GetInvoice(ctx context.Context, request GetInvoiceRequestObject) (GetInvoiceResponseObject, error)
+	// IssueInvoice Send the invoice to the tenant (M-01). It can no longer be edited.
+	// (POST /admin/invoices/{invoiceId}/issue)
+	IssueInvoice(ctx context.Context, request IssueInvoiceRequestObject) (IssueInvoiceResponseObject, error)
+	// AddInvoiceLine Add a discount (negative) or penalty (positive) line (DRAFT only)
+	// (POST /admin/invoices/{invoiceId}/lines)
+	AddInvoiceLine(ctx context.Context, request AddInvoiceLineRequestObject) (AddInvoiceLineResponseObject, error)
+	// RemoveInvoiceLine Remove a discount or penalty line (DRAFT only)
+	// (DELETE /admin/invoices/{invoiceId}/lines/{lineId})
+	RemoveInvoiceLine(ctx context.Context, request RemoveInvoiceLineRequestObject) (RemoveInvoiceLineResponseObject, error)
+	// SetInvoiceMeters Enter meter readings (DRAFT only). Lower than previous requires rolloverConfirmed (M-02).
+	// (PATCH /admin/invoices/{invoiceId}/meters)
+	SetInvoiceMeters(ctx context.Context, request SetInvoiceMetersRequestObject) (SetInvoiceMetersResponseObject, error)
+	// UpdateLease Edit a lease (M-07)
+	// (PATCH /admin/leases/{leaseId})
+	UpdateLease(ctx context.Context, request UpdateLeaseRequestObject) (UpdateLeaseResponseObject, error)
+	// UpdateRecurringCharge Edit or switch a monthly service charge on/off (M-08)
+	// (PATCH /admin/recurring-charges/{chargeId})
+	UpdateRecurringCharge(ctx context.Context, request UpdateRecurringChargeRequestObject) (UpdateRecurringChargeResponseObject, error)
+	// ListRooms All rooms (P-A05). Not paginated.
+	// (GET /admin/rooms)
+	ListRooms(ctx context.Context, request ListRoomsRequestObject) (ListRoomsResponseObject, error)
+	// GetRoom Room detail (P-A06)
+	// (GET /admin/rooms/{roomNumber})
+	GetRoom(ctx context.Context, request GetRoomRequestObject) (GetRoomResponseObject, error)
+	// UpdateRoom Change rent or meter digits. Affects only drafts created afterwards (INV-4).
+	// (PATCH /admin/rooms/{roomNumber})
+	UpdateRoom(ctx context.Context, request UpdateRoomRequestObject) (UpdateRoomResponseObject, error)
+	// CreateLease Add a lease (M-07). Leases of a room may not overlap.
+	// (POST /admin/rooms/{roomNumber}/leases)
+	CreateLease(ctx context.Context, request CreateLeaseRequestObject) (CreateLeaseResponseObject, error)
+	// CreateRecurringCharge Add a monthly service charge (M-08)
+	// (POST /admin/rooms/{roomNumber}/recurring-charges)
+	CreateRecurringCharge(ctx context.Context, request CreateRecurringChargeRequestObject) (CreateRecurringChargeResponseObject, error)
+	// ListTenantAccounts Tenant accounts by status (P-A08 tabs)
+	// (GET /admin/tenant-accounts)
+	ListTenantAccounts(ctx context.Context, request ListTenantAccountsRequestObject) (ListTenantAccountsResponseObject, error)
+	// AssignRoom Bind an account to a room (M-06). PENDING or INACTIVE → ACTIVE.
+	// (POST /admin/tenant-accounts/{accountId}/assign)
+	AssignRoom(ctx context.Context, request AssignRoomRequestObject) (AssignRoomResponseObject, error)
+	// ResetTenantPassword Admin sets a new password for a tenant; ends all its sessions
+	// (PUT /admin/tenant-accounts/{accountId}/password)
+	ResetTenantPassword(ctx context.Context, request ResetTenantPasswordRequestObject) (ResetTenantPasswordResponseObject, error)
+	// UnassignRoom Unbind an account when the tenant moves out. ACTIVE → INACTIVE; ends all its sessions.
+	// (POST /admin/tenant-accounts/{accountId}/unassign)
+	UnassignRoom(ctx context.Context, request UnassignRoomRequestObject) (UnassignRoomResponseObject, error)
+	// ListUtilityRates Current rates and full history (P-A12)
+	// (GET /admin/utility-rates)
+	ListUtilityRates(ctx context.Context, request ListUtilityRatesRequestObject) (ListUtilityRatesResponseObject, error)
+	// CreateUtilityRate Add a new rate (M-09). Append-only; must start after the latest rate of that type.
+	// (POST /admin/utility-rates)
+	CreateUtilityRate(ctx context.Context, request CreateUtilityRateRequestObject) (CreateUtilityRateResponseObject, error)
+	// AdminLogin Admin login (P-A01)
+	// (POST /auth/admin/login)
+	AdminLogin(ctx context.Context, request AdminLoginRequestObject) (AdminLoginResponseObject, error)
+	// Logout End the current session
+	// (POST /auth/logout)
+	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
+	// GetMe The logged-in user
+	// (GET /auth/me)
+	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// TenantLogin Tenant login. PENDING and INACTIVE accounts may log in but cannot see room data.
+	// (POST /auth/tenant/login)
+	TenantLogin(ctx context.Context, request TenantLoginRequestObject) (TenantLoginResponseObject, error)
+	// RegisterTenant Tenant self-registration; the account waits (PENDING) until the admin assigns a room
+	// (POST /auth/tenant/register)
+	RegisterTenant(ctx context.Context, request RegisterTenantRequestObject) (RegisterTenantResponseObject, error)
 	// GetHealth Liveness and database check
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// GetTenantRoom The room the logged-in tenant is bound to
+	// (GET /tenant/room)
+	GetTenantRoom(ctx context.Context, request GetTenantRoomRequestObject) (GetTenantRoomResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *gin.Context, request any) (any, error)
@@ -216,6 +2544,879 @@ type strictHandler struct {
 	options     StrictGinServerOptions
 }
 
+// GetRoomInvoice operation middleware
+func (sh *strictHandler) GetRoomInvoice(ctx *gin.Context, period Period, roomNumber RoomNumber) {
+	var request GetRoomInvoiceRequestObject
+
+	request.Period = period
+	request.RoomNumber = roomNumber
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRoomInvoice(ctx, request.(GetRoomInvoiceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRoomInvoice")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetRoomInvoiceResponseObject); ok {
+		if err := validResponse.VisitGetRoomInvoiceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateInvoiceDraft operation middleware
+func (sh *strictHandler) CreateInvoiceDraft(ctx *gin.Context, period Period, roomNumber RoomNumber) {
+	var request CreateInvoiceDraftRequestObject
+
+	request.Period = period
+	request.RoomNumber = roomNumber
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateInvoiceDraft(ctx, request.(CreateInvoiceDraftRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateInvoiceDraft")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateInvoiceDraftResponseObject); ok {
+		if err := validResponse.VisitCreateInvoiceDraftResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetInvoice operation middleware
+func (sh *strictHandler) GetInvoice(ctx *gin.Context, invoiceId InvoiceId) {
+	var request GetInvoiceRequestObject
+
+	request.InvoiceId = invoiceId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInvoice(ctx, request.(GetInvoiceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInvoice")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetInvoiceResponseObject); ok {
+		if err := validResponse.VisitGetInvoiceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// IssueInvoice operation middleware
+func (sh *strictHandler) IssueInvoice(ctx *gin.Context, invoiceId InvoiceId) {
+	var request IssueInvoiceRequestObject
+
+	request.InvoiceId = invoiceId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.IssueInvoice(ctx, request.(IssueInvoiceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "IssueInvoice")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(IssueInvoiceResponseObject); ok {
+		if err := validResponse.VisitIssueInvoiceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddInvoiceLine operation middleware
+func (sh *strictHandler) AddInvoiceLine(ctx *gin.Context, invoiceId InvoiceId) {
+	var request AddInvoiceLineRequestObject
+
+	request.InvoiceId = invoiceId
+
+	var body AddInvoiceLineJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AddInvoiceLine(ctx, request.(AddInvoiceLineRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddInvoiceLine")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AddInvoiceLineResponseObject); ok {
+		if err := validResponse.VisitAddInvoiceLineResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveInvoiceLine operation middleware
+func (sh *strictHandler) RemoveInvoiceLine(ctx *gin.Context, invoiceId InvoiceId, lineId openapi_types.UUID) {
+	var request RemoveInvoiceLineRequestObject
+
+	request.InvoiceId = invoiceId
+	request.LineId = lineId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveInvoiceLine(ctx, request.(RemoveInvoiceLineRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveInvoiceLine")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RemoveInvoiceLineResponseObject); ok {
+		if err := validResponse.VisitRemoveInvoiceLineResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetInvoiceMeters operation middleware
+func (sh *strictHandler) SetInvoiceMeters(ctx *gin.Context, invoiceId InvoiceId) {
+	var request SetInvoiceMetersRequestObject
+
+	request.InvoiceId = invoiceId
+
+	var body SetInvoiceMetersJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SetInvoiceMeters(ctx, request.(SetInvoiceMetersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetInvoiceMeters")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(SetInvoiceMetersResponseObject); ok {
+		if err := validResponse.VisitSetInvoiceMetersResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateLease operation middleware
+func (sh *strictHandler) UpdateLease(ctx *gin.Context, leaseId LeaseId) {
+	var request UpdateLeaseRequestObject
+
+	request.LeaseId = leaseId
+
+	var body UpdateLeaseJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateLease(ctx, request.(UpdateLeaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateLease")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateLeaseResponseObject); ok {
+		if err := validResponse.VisitUpdateLeaseResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateRecurringCharge operation middleware
+func (sh *strictHandler) UpdateRecurringCharge(ctx *gin.Context, chargeId ChargeId) {
+	var request UpdateRecurringChargeRequestObject
+
+	request.ChargeId = chargeId
+
+	var body UpdateRecurringChargeJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateRecurringCharge(ctx, request.(UpdateRecurringChargeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateRecurringCharge")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateRecurringChargeResponseObject); ok {
+		if err := validResponse.VisitUpdateRecurringChargeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRooms operation middleware
+func (sh *strictHandler) ListRooms(ctx *gin.Context, params ListRoomsParams) {
+	var request ListRoomsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRooms(ctx, request.(ListRoomsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRooms")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListRoomsResponseObject); ok {
+		if err := validResponse.VisitListRoomsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetRoom operation middleware
+func (sh *strictHandler) GetRoom(ctx *gin.Context, roomNumber RoomNumber) {
+	var request GetRoomRequestObject
+
+	request.RoomNumber = roomNumber
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRoom(ctx, request.(GetRoomRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRoom")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetRoomResponseObject); ok {
+		if err := validResponse.VisitGetRoomResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateRoom operation middleware
+func (sh *strictHandler) UpdateRoom(ctx *gin.Context, roomNumber RoomNumber) {
+	var request UpdateRoomRequestObject
+
+	request.RoomNumber = roomNumber
+
+	var body UpdateRoomJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateRoom(ctx, request.(UpdateRoomRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateRoom")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateRoomResponseObject); ok {
+		if err := validResponse.VisitUpdateRoomResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateLease operation middleware
+func (sh *strictHandler) CreateLease(ctx *gin.Context, roomNumber RoomNumber) {
+	var request CreateLeaseRequestObject
+
+	request.RoomNumber = roomNumber
+
+	var body CreateLeaseJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateLease(ctx, request.(CreateLeaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateLease")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateLeaseResponseObject); ok {
+		if err := validResponse.VisitCreateLeaseResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateRecurringCharge operation middleware
+func (sh *strictHandler) CreateRecurringCharge(ctx *gin.Context, roomNumber RoomNumber) {
+	var request CreateRecurringChargeRequestObject
+
+	request.RoomNumber = roomNumber
+
+	var body CreateRecurringChargeJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateRecurringCharge(ctx, request.(CreateRecurringChargeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateRecurringCharge")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateRecurringChargeResponseObject); ok {
+		if err := validResponse.VisitCreateRecurringChargeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTenantAccounts operation middleware
+func (sh *strictHandler) ListTenantAccounts(ctx *gin.Context, params ListTenantAccountsParams) {
+	var request ListTenantAccountsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTenantAccounts(ctx, request.(ListTenantAccountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTenantAccounts")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTenantAccountsResponseObject); ok {
+		if err := validResponse.VisitListTenantAccountsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AssignRoom operation middleware
+func (sh *strictHandler) AssignRoom(ctx *gin.Context, accountId AccountId) {
+	var request AssignRoomRequestObject
+
+	request.AccountId = accountId
+
+	var body AssignRoomJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AssignRoom(ctx, request.(AssignRoomRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AssignRoom")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AssignRoomResponseObject); ok {
+		if err := validResponse.VisitAssignRoomResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResetTenantPassword operation middleware
+func (sh *strictHandler) ResetTenantPassword(ctx *gin.Context, accountId AccountId) {
+	var request ResetTenantPasswordRequestObject
+
+	request.AccountId = accountId
+
+	var body ResetTenantPasswordJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ResetTenantPassword(ctx, request.(ResetTenantPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResetTenantPassword")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ResetTenantPasswordResponseObject); ok {
+		if err := validResponse.VisitResetTenantPasswordResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnassignRoom operation middleware
+func (sh *strictHandler) UnassignRoom(ctx *gin.Context, accountId AccountId) {
+	var request UnassignRoomRequestObject
+
+	request.AccountId = accountId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UnassignRoom(ctx, request.(UnassignRoomRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnassignRoom")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UnassignRoomResponseObject); ok {
+		if err := validResponse.VisitUnassignRoomResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUtilityRates operation middleware
+func (sh *strictHandler) ListUtilityRates(ctx *gin.Context) {
+	var request ListUtilityRatesRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUtilityRates(ctx, request.(ListUtilityRatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUtilityRates")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListUtilityRatesResponseObject); ok {
+		if err := validResponse.VisitListUtilityRatesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateUtilityRate operation middleware
+func (sh *strictHandler) CreateUtilityRate(ctx *gin.Context) {
+	var request CreateUtilityRateRequestObject
+
+	var body CreateUtilityRateJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateUtilityRate(ctx, request.(CreateUtilityRateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateUtilityRate")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateUtilityRateResponseObject); ok {
+		if err := validResponse.VisitCreateUtilityRateResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AdminLogin operation middleware
+func (sh *strictHandler) AdminLogin(ctx *gin.Context) {
+	var request AdminLoginRequestObject
+
+	var body AdminLoginJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AdminLogin(ctx, request.(AdminLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AdminLogin")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AdminLoginResponseObject); ok {
+		if err := validResponse.VisitAdminLoginResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Logout operation middleware
+func (sh *strictHandler) Logout(ctx *gin.Context) {
+	var request LogoutRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.Logout(ctx, request.(LogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Logout")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(LogoutResponseObject); ok {
+		if err := validResponse.VisitLogoutResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMe operation middleware
+func (sh *strictHandler) GetMe(ctx *gin.Context) {
+	var request GetMeRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMe(ctx, request.(GetMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMe")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetMeResponseObject); ok {
+		if err := validResponse.VisitGetMeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TenantLogin operation middleware
+func (sh *strictHandler) TenantLogin(ctx *gin.Context) {
+	var request TenantLoginRequestObject
+
+	var body TenantLoginJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.TenantLogin(ctx, request.(TenantLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TenantLogin")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(TenantLoginResponseObject); ok {
+		if err := validResponse.VisitTenantLoginResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RegisterTenant operation middleware
+func (sh *strictHandler) RegisterTenant(ctx *gin.Context) {
+	var request RegisterTenantRequestObject
+
+	var body RegisterTenantJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterTenant(ctx, request.(RegisterTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RegisterTenantResponseObject); ok {
+		if err := validResponse.VisitRegisterTenantResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHealth operation middleware
 func (sh *strictHandler) GetHealth(ctx *gin.Context) {
 	var request GetHealthRequestObject
@@ -240,23 +3441,106 @@ func (sh *strictHandler) GetHealth(ctx *gin.Context) {
 	}
 }
 
+// GetTenantRoom operation middleware
+func (sh *strictHandler) GetTenantRoom(ctx *gin.Context) {
+	var request GetTenantRoomRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTenantRoom(ctx, request.(GetTenantRoomRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTenantRoom")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTenantRoomResponseObject); ok {
+		if err := validResponse.VisitGetTenantRoomResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"lJRfk9s0EMC/ys7CAwyu7Vxb/vjtCAFuSmmmaZ+aTLORN7bubElI6zCeTL47IzvJXcgBw5PX2r/6aXf3",
-	"qGzrrGEjAYs9eg7OmsDDz9zbTcNtFJU1wkaiSM41WpFoazI3WnxzH6yJuqBqbilKX3reYoFfZI/xs1Eb",
-	"slPcw+GQYMlBee1iOCzw/c9T+OHV6+/gaAM/sZBuAkbTo38M/ytTI3WUnLeOveix5CAk3SCx6VosPuG7",
-	"N7hKUHrHWGAQr001BPP8R6c9l9Hm6PVoZzf3rAQPyVMGl5mULTl+L+tfCG0aho/z+ez958Xvt29mn6e3",
-	"ixmw99ZD9EmgJee4BLFA8KEmDS2HQBXDpgepGbZ+gF3iVdmRVsQR816p4oU4yF35rPYRzFGljXDFPupE",
-	"S8PPeo0H+//AN2hPYc6pkhHRNdTors3WXtObWiOelLzYah8Ebud3KcxKLSC1DrDVDcOgSSInA74zsK4s",
-	"VGzYkzCkWZqm66XRBjakHtiUGZApL6iCajQbOTlZny7NW2u4Bx2AoGSlW2pgvCr8qaWGG3ANKQ7wFadV",
-	"Ckt89Xpyk+b5Er9OQHTLQah1Acjz0twt3sH33+YT+PhhmsBGN02M49hrWw4msO77vn/RtusUZrEtxtNT",
-	"5y/N31p/rIEgjK21jlTX6dKciRf4I7wlE7Q1ERkmuGMfRqJ5Oknz+JLWsSGnscCXaZ6+xAQdST00RFaf",
-	"h6niYcRjnw8DHpsJf2E5jltyuR9u8vxfdsP/2wnHDM+shAX7nVYcn6dz5+csSWhDYTj2TKqOcMYJ2VLX",
-	"yD/lO1/gyRZKMHRtS77HAn/TOzYcwpDonETVrB4icKrCsDD6INziaig3sI/Asfi0x843WGBGTme7CR5W",
-	"Z5c9GmqHGRpdD6vDXwEAAP//",
+	"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",
+	"yrvFX8rgtPAga4VZ3i7/NwAA//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

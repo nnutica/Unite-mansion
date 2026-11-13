@@ -6,16 +6,49 @@ overrides:
     overrides:
       - db_type: uuid
         go_type: github.com/google/uuid.UUID
+      - db_type: uuid
+        nullable: true
+        go_type:
+          import: github.com/google/uuid
+          type: NullUUID
       - db_type: pg_catalog.numeric
         go_type: github.com/shopspring/decimal.Decimal
       - db_type: timestamptz
+        go_type: time.Time
+      - db_type: timestamptz
+        nullable: true
+        go_type:
+          type: time.Time
+          pointer: true
+      - db_type: date
         go_type: time.Time
 sql:
   - engine: postgresql
     schema: db/migrations
     queries: db/queries/audit
     gen:
-      go:
+      go: &gen
         package: sqlcgen
         out: internal/audit/adapter/postgres/sqlcgen
         sql_package: pgx/v5
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries/identity
+    gen:
+      go:
+        <<: *gen
+        out: internal/identity/adapter/postgres/sqlcgen
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries/tenancy
+    gen:
+      go:
+        <<: *gen
+        out: internal/tenancy/adapter/postgres/sqlcgen
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries/billing
+    gen:
+      go:
+        <<: *gen
+        out: internal/billing/adapter/postgres/sqlcgen

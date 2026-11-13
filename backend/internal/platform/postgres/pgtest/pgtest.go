@@ -19,6 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"unite-mansion/db"
+	platformpg "unite-mansion/internal/platform/postgres"
 )
 
 // NewPool starts Postgres for the test, migrates it and returns a pool.
@@ -48,7 +49,8 @@ func NewPool(t *testing.T) *pgxpool.Pool {
 	}
 	migrate(t, dsn)
 
-	pool, err := pgxpool.New(ctx, dsn)
+	// Same pool setup as the API (UTC timestamps).
+	pool, err := platformpg.NewPool(ctx, dsn)
 	if err != nil {
 		t.Fatalf("create pool: %v", err)
 	}

@@ -17,15 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
-	"unite-mansion/api"
-	auditpg "unite-mansion/internal/audit/adapter/postgres"
-	auditapp "unite-mansion/internal/audit/app"
 	"unite-mansion/internal/platform/config"
-	"unite-mansion/internal/platform/health"
-	"unite-mansion/internal/platform/httpx"
 	"unite-mansion/internal/platform/logging"
 	"unite-mansion/internal/platform/postgres"
-	"unite-mansion/internal/shared"
 )
 
 func main() {
@@ -56,36 +50,18 @@ func run() error {
 	}
 	defer pool.Close()
 
-	// Domain events: every event is written to the audit log in the same tx.
-	dispatcher := shared.NewDispatcher()
-	dispatcher.SubscribeAll(auditapp.NewRecorder(auditpg.NewRepository(pool)).Handle)
-
 	if cfg.AppEnv != "local" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	router := gin.New()
-	if err := router.SetTrustedProxies(nil); err != nil {
-		return fmt.Errorf("set trusted proxies: %w", err)
-	}
-	router.Use(
-		httpx.RequestIDMiddleware(),
-		httpx.Errors(log /* each context's ErrorMappings go here */),
-		httpx.Recovery(log),
-	)
-	router.NoRoute(httpx.NotFound)
-
-	srv := &server{
-		Handler: health.NewHandler(pool),
-	}
-	strict := api.NewStrictHandlerWithOptions(srv, nil, api.StrictGinServerOptions{
-		RequestErrorHandlerFunc:  httpx.RequestError,
-		HandlerErrorFunc:         httpx.HandlerError,
-		ResponseErrorHandlerFunc: httpx.HandlerError,
+	router, err := newRouter(deps{
+		pool:         pool,
+		log:          log,
+		secureCookie: cfg.AppEnv != "local",
+		now:          time.Now,
 	})
-	api.RegisterHandlersWithOptions(router, strict, api.GinServerOptions{
-		BaseURL:      "/api/v1",
-		ErrorHandler: httpx.ParamError,
-	})
+	if err != nil {
+		return fmt.Errorf("build router: %w", err)
+	}
 
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,
