@@ -1,16 +1,50 @@
-# Local Postgres for development and integration tests.
-# Alternatively point DATABASE_URL at a Neon dev branch.
+# Local Postgres and RustFS (S3-compatible storage) for development.
+# Credentials come from backend/.env (copy .env.example). UAT uses Neon + R2.
 name: b-mansion
 services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: bmansion
-      POSTGRES_PASSWORD: bmansion
-      POSTGRES_DB: bmansion
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in backend/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in backend/.env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in backend/.env}
     ports:
       - "7432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  rustfs:
+    image: rustfs/rustfs:1.0.4
+    environment:
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS: "http://localhost:7901"
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in backend/.env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in backend/.env}
+    ports:
+      - "7900:9000" # S3 API
+      - "7901:9001" # console
+    # Named volume: owned by the image's rustfs user (UID 10001), no chown needed.
+    volumes:
+      - rustfsdata:/data
+
+  # One-shot: create the dev bucket and apply CORS (idempotent).
+  rustfs-init:
+    image: amazon/aws-cli:2.39.0
+    depends_on:
+      - rustfs
+    entrypoint: ["/bin/sh", "/init/init.sh"]
+    environment:
+      S3_INTERNAL_ENDPOINT: http://rustfs:9000
+      S3_BUCKET: ${S3_BUCKET:?set S3_BUCKET in backend/.env}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in backend/.env}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in backend/.env}
+      AWS_DEFAULT_REGION: ${S3_REGION:-auto}
+    volumes:
+      - ./docker/rustfs:/init:ro
+    restart: "no"
+
 volumes:
   pgdata:
+  rustfsdata:

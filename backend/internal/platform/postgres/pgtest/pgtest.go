@@ -6,6 +6,7 @@ package pgtest
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ func NewPool(t *testing.T) *pgxpool.Pool {
 	ctr, err := tcpostgres.Run(ctx, "postgres:17-alpine",
 		tcpostgres.WithDatabase("bmansion_test"),
 		tcpostgres.WithUsername("test"),
-		tcpostgres.WithPassword("test"),
+		tcpostgres.WithPassword(rand.Text()), // throwaway container: random, never a fixed credential
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
