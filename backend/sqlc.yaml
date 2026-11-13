@@ -52,3 +52,10 @@ sql:
       go:
         <<: *gen
         out: internal/billing/adapter/postgres/sqlcgen
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries/maintenance
+    gen:
+      go:
+        <<: *gen
+        out: internal/maintenance/adapter/postgres/sqlcgen

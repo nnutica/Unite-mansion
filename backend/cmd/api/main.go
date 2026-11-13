@@ -20,6 +20,7 @@ import (
 	"unite-mansion/internal/platform/config"
 	"unite-mansion/internal/platform/logging"
 	"unite-mansion/internal/platform/postgres"
+	"unite-mansion/internal/platform/storage/s3store"
 )
 
 func main() {
@@ -50,11 +51,25 @@ func run() error {
 	}
 	defer pool.Close()
 
+	// RustFS in dev, Cloudflare R2 in UAT: same adapter, different S3_* env.
+	files, err := s3store.New(s3store.Config{
+		Endpoint:        cfg.S3.Endpoint,
+		Region:          cfg.S3.Region,
+		Bucket:          cfg.S3.Bucket,
+		AccessKeyID:     cfg.S3.AccessKeyID,
+		SecretAccessKey: cfg.S3.SecretAccessKey,
+		ForcePathStyle:  cfg.S3.ForcePathStyle,
+	})
+	if err != nil {
+		return fmt.Errorf("file storage: %w", err)
+	}
+
 	if cfg.AppEnv != "local" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router, err := newRouter(deps{
 		pool:         pool,
+		files:        files,
 		log:          log,
 		secureCookie: cfg.AppEnv != "local",
 		now:          time.Now,

@@ -22,6 +22,7 @@ import (
 	identitypg "unite-mansion/internal/identity/adapter/postgres"
 	"unite-mansion/internal/platform/password"
 	"unite-mansion/internal/platform/postgres/pgtest"
+	"unite-mansion/internal/platform/storage"
 )
 
 // clock is a settable time source shared by the router under test.
@@ -40,7 +41,10 @@ type env struct {
 	url   string
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWithStorage(t, nil) }
+
+// newEnvWithStorage wires files (a RustFS store) for slip and repair-photo tests.
+func newEnvWithStorage(t *testing.T, files storage.FileStorage) *env {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	pool := pgtest.NewPool(t)
@@ -54,7 +58,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 
-	router, err := newRouter(deps{pool: pool, log: slog.New(slog.NewTextHandler(io.Discard, nil)), now: clk.now})
+	router, err := newRouter(deps{pool: pool, files: files, log: slog.New(slog.NewTextHandler(io.Discard, nil)), now: clk.now})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,10 +142,12 @@ func (e *env) tenant(username string) (*client, string) {
 	return c, r.Body["id"].(string)
 }
 
-func (e *env) auditCount(t *testing.T, event string) int {
+func (e *env) auditCount(t *testing.T, event string) int { return e.auditCountBy(t, event, "ADMIN") }
+
+func (e *env) auditCountBy(t *testing.T, event, actorType string) int {
 	t.Helper()
 	var n int
-	if err := e.pool.QueryRow(context.Background(), `SELECT count(*) FROM audit_logs WHERE event_name = $1 AND actor_type = 'ADMIN'`, event).Scan(&n); err != nil {
+	if err := e.pool.QueryRow(context.Background(), `SELECT count(*) FROM audit_logs WHERE event_name = $1 AND actor_type = $2`, event, actorType).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	return n

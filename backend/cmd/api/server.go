@@ -18,11 +18,15 @@ import (
 	identityhttp "unite-mansion/internal/identity/adapter/http"
 	identitypg "unite-mansion/internal/identity/adapter/postgres"
 	identityapp "unite-mansion/internal/identity/app"
+	maintenancehttp "unite-mansion/internal/maintenance/adapter/http"
+	maintenancepg "unite-mansion/internal/maintenance/adapter/postgres"
+	maintenanceapp "unite-mansion/internal/maintenance/app"
 	"unite-mansion/internal/platform/auth"
 	"unite-mansion/internal/platform/health"
 	"unite-mansion/internal/platform/httpx"
 	"unite-mansion/internal/platform/password"
 	"unite-mansion/internal/platform/postgres"
+	"unite-mansion/internal/platform/storage"
 	"unite-mansion/internal/shared"
 	tenancyhttp "unite-mansion/internal/tenancy/adapter/http"
 	tenancypg "unite-mansion/internal/tenancy/adapter/postgres"
@@ -33,10 +37,11 @@ const basePath = "/api/v1"
 
 // Aliases give each embedded handler a distinct field name.
 type (
-	healthHandler   = health.Handler
-	identityHandler = identityhttp.Handler
-	tenancyHandler  = tenancyhttp.Handler
-	billingHandler  = billinghttp.Handler
+	healthHandler      = health.Handler
+	identityHandler    = identityhttp.Handler
+	tenancyHandler     = tenancyhttp.Handler
+	billingHandler     = billinghttp.Handler
+	maintenanceHandler = maintenancehttp.Handler
 )
 
 // server composes each context's handler into the generated StrictServerInterface.
@@ -45,6 +50,7 @@ type server struct {
 	*identityHandler
 	*tenancyHandler
 	*billingHandler
+	*maintenanceHandler
 }
 
 var _ api.StrictServerInterface = (*server)(nil)
@@ -52,6 +58,7 @@ var _ api.StrictServerInterface = (*server)(nil)
 type deps struct {
 	pool         *pgxpool.Pool
 	log          *slog.Logger
+	files        storage.FileStorage
 	secureCookie bool
 	now          func() time.Time
 }
@@ -72,7 +79,8 @@ func newRouter(d deps) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	billing := billingapp.NewService(billingpg.NewRepository(d.pool), billingTenancy{tenancy}, txm, dispatcher, d.now, newID)
+	billing := billingapp.NewService(billingpg.NewRepository(d.pool), billingTenancy{tenancy}, d.files, txm, dispatcher, d.now, newID)
+	maintenance := maintenanceapp.NewService(maintenancepg.NewRepository(d.pool), tenancy, d.files, txm, dispatcher, d.now, newID)
 
 	router := gin.New()
 	// Handlers receive *gin.Context as context.Context; fall back to the
@@ -88,6 +96,8 @@ func newRouter(d deps) (http.Handler, error) {
 	mappings = append(mappings, identityhttp.ErrorMappings()...)
 	mappings = append(mappings, tenancyhttp.ErrorMappings()...)
 	mappings = append(mappings, billinghttp.ErrorMappings()...)
+	mappings = append(mappings, billinghttp.UploadErrorMappings()...)
+	mappings = append(mappings, maintenancehttp.ErrorMappings()...)
 
 	router.Use(
 		httpx.RequestIDMiddleware(),
@@ -99,10 +109,11 @@ func newRouter(d deps) (http.Handler, error) {
 	router.NoRoute(httpx.NotFound)
 
 	srv := &server{
-		healthHandler:   health.NewHandler(d.pool),
-		identityHandler: identityhttp.NewHandler(identity, d.secureCookie),
-		tenancyHandler:  tenancyhttp.NewHandler(tenancy, tenancyAccounts{identity}),
-		billingHandler:  billinghttp.NewHandler(billing),
+		healthHandler:      health.NewHandler(d.pool),
+		identityHandler:    identityhttp.NewHandler(identity, d.secureCookie),
+		tenancyHandler:     tenancyhttp.NewHandler(tenancy, tenancyAccounts{identity}),
+		billingHandler:     billinghttp.NewHandler(billing),
+		maintenanceHandler: maintenancehttp.NewHandler(maintenance),
 	}
 	strict := api.NewStrictHandlerWithOptions(srv, nil, api.StrictGinServerOptions{
 		RequestErrorHandlerFunc:  httpx.RequestError,

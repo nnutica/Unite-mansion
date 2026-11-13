@@ -75,6 +75,36 @@ type Lease struct {
 	UpdatedAt  time.Time
 }
 
+type MaintenanceImage struct {
+	RequestID uuid.UUID
+	Position  int32
+	FileKey   string
+}
+
+type MaintenanceRequest struct {
+	ID          uuid.UUID
+	RoomID      uuid.UUID
+	Category    string
+	Description string
+	Status      string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type PaymentSlip struct {
+	ID           uuid.UUID
+	InvoiceID    uuid.UUID
+	FileKey      string
+	FileSha256   string
+	ContentType  string
+	SizeBytes    int64
+	Status       string
+	RejectReason pgtype.Text
+	RejectNote   pgtype.Text
+	SubmittedAt  time.Time
+	ReviewedAt   *time.Time
+}
+
 type RecurringCharge struct {
 	ID        uuid.UUID
 	RoomID    uuid.UUID

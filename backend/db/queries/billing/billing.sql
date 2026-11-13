@@ -58,3 +58,46 @@ FROM invoices
 WHERE room_id = $1 AND billing_period < $2 AND status IN ('ISSUED', 'PAID')
 ORDER BY billing_period DESC
 LIMIT 3;
+
+-- name: ListInvoiceSummariesByRoom :many
+SELECT i.id, i.invoice_number, i.room_number, i.billing_period, i.total, i.status,
+       EXISTS (SELECT 1 FROM payment_slips s WHERE s.invoice_id = i.id AND s.status = 'PENDING')::bool AS has_pending_slip
+FROM invoices i
+WHERE i.room_id = $1 AND i.status <> 'DRAFT'
+ORDER BY i.billing_period DESC;
+
+-- name: InsertSlip :exec
+INSERT INTO payment_slips (id, invoice_id, file_key, file_sha256, content_type, size_bytes, status, submitted_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+
+-- name: UpdateSlipReview :exec
+UPDATE payment_slips SET status = $2, reject_reason = $3, reject_note = $4, reviewed_at = $5 WHERE id = $1;
+
+-- name: GetSlipForUpdate :one
+SELECT * FROM payment_slips WHERE id = $1 FOR UPDATE;
+
+-- name: ListSlipsByInvoice :many
+SELECT sqlc.embed(s),
+       EXISTS (SELECT 1 FROM payment_slips o WHERE o.file_sha256 = s.file_sha256 AND o.id <> s.id)::bool AS possible_duplicate
+FROM payment_slips s
+WHERE s.invoice_id = $1
+ORDER BY s.submitted_at;
+
+-- name: ListSlipQueue :many
+SELECT sqlc.embed(s),
+       EXISTS (SELECT 1 FROM payment_slips o WHERE o.file_sha256 = s.file_sha256 AND o.id <> s.id)::bool AS possible_duplicate,
+       i.invoice_number, i.room_number, i.billing_period, i.total, i.status AS invoice_status,
+       EXISTS (SELECT 1 FROM payment_slips p WHERE p.invoice_id = i.id AND p.status = 'PENDING')::bool AS has_pending_slip
+FROM payment_slips s
+JOIN invoices i ON i.id = s.invoice_id
+WHERE sqlc.narg(status)::text IS NULL OR s.status = sqlc.narg(status)::text
+ORDER BY s.submitted_at;
+
+-- name: GetSlipQueueItem :one
+SELECT sqlc.embed(s),
+       EXISTS (SELECT 1 FROM payment_slips o WHERE o.file_sha256 = s.file_sha256 AND o.id <> s.id)::bool AS possible_duplicate,
+       i.invoice_number, i.room_number, i.billing_period, i.total, i.status AS invoice_status,
+       EXISTS (SELECT 1 FROM payment_slips p WHERE p.invoice_id = i.id AND p.status = 'PENDING')::bool AS has_pending_slip
+FROM payment_slips s
+JOIN invoices i ON i.id = s.invoice_id
+WHERE s.id = $1;

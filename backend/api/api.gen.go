@@ -137,6 +137,54 @@ func (e InvoiceLineType) Valid() bool {
 	}
 }
 
+// Defines values for MaintenanceCategory.
+const (
+	MaintenanceCategoryAIRCONDITIONER MaintenanceCategory = "AIR_CONDITIONER"
+	MaintenanceCategoryELECTRICITY    MaintenanceCategory = "ELECTRICITY"
+	MaintenanceCategoryFURNITURE      MaintenanceCategory = "FURNITURE"
+	MaintenanceCategoryWATER          MaintenanceCategory = "WATER"
+)
+
+// Valid indicates whether the value is a known member of the MaintenanceCategory enum.
+func (e MaintenanceCategory) Valid() bool {
+	switch e {
+	case MaintenanceCategoryAIRCONDITIONER:
+		return true
+	case MaintenanceCategoryELECTRICITY:
+		return true
+	case MaintenanceCategoryFURNITURE:
+		return true
+	case MaintenanceCategoryWATER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MaintenanceStatus.
+const (
+	MaintenanceStatusCOMPLETED            MaintenanceStatus = "COMPLETED"
+	MaintenanceStatusCOORDINATING         MaintenanceStatus = "COORDINATING"
+	MaintenanceStatusNEW                  MaintenanceStatus = "NEW"
+	MaintenanceStatusTECHNICIANDISPATCHED MaintenanceStatus = "TECHNICIAN_DISPATCHED"
+)
+
+// Valid indicates whether the value is a known member of the MaintenanceStatus enum.
+func (e MaintenanceStatus) Valid() bool {
+	switch e {
+	case MaintenanceStatusCOMPLETED:
+		return true
+	case MaintenanceStatusCOORDINATING:
+		return true
+	case MaintenanceStatusNEW:
+		return true
+	case MaintenanceStatusTECHNICIANDISPATCHED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Role.
 const (
 	RoleADMIN  Role = "ADMIN"
@@ -167,6 +215,66 @@ func (e RoomStatus) Valid() bool {
 	case RoomStatusOCCUPIED:
 		return true
 	case RoomStatusVACANT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SlipRejectReason.
+const (
+	SlipRejectReasonAMOUNTMISMATCH SlipRejectReason = "AMOUNT_MISMATCH"
+	SlipRejectReasonDUPLICATE      SlipRejectReason = "DUPLICATE"
+	SlipRejectReasonUNCLEAR        SlipRejectReason = "UNCLEAR"
+)
+
+// Valid indicates whether the value is a known member of the SlipRejectReason enum.
+func (e SlipRejectReason) Valid() bool {
+	switch e {
+	case SlipRejectReasonAMOUNTMISMATCH:
+		return true
+	case SlipRejectReasonDUPLICATE:
+		return true
+	case SlipRejectReasonUNCLEAR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SlipStatus.
+const (
+	SlipStatusAPPROVED SlipStatus = "APPROVED"
+	SlipStatusPENDING  SlipStatus = "PENDING"
+	SlipStatusREJECTED SlipStatus = "REJECTED"
+)
+
+// Valid indicates whether the value is a known member of the SlipStatus enum.
+func (e SlipStatus) Valid() bool {
+	switch e {
+	case SlipStatusAPPROVED:
+		return true
+	case SlipStatusPENDING:
+		return true
+	case SlipStatusREJECTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UploadRequestContentType.
+const (
+	UploadRequestContentTypeImagejpeg UploadRequestContentType = "image/jpeg"
+	UploadRequestContentTypeImagepng  UploadRequestContentType = "image/png"
+)
+
+// Valid indicates whether the value is a known member of the UploadRequestContentType enum.
+func (e UploadRequestContentType) Valid() bool {
+	switch e {
+	case UploadRequestContentTypeImagejpeg:
+		return true
+	case UploadRequestContentTypeImagepng:
 		return true
 	default:
 		return false
@@ -222,6 +330,15 @@ type BillDisplayStatus string
 // BillingPeriod Example: 2026-11
 type BillingPeriod = string
 
+// CreateMaintenanceRequest defines model for CreateMaintenanceRequest.
+type CreateMaintenanceRequest struct {
+	Category    MaintenanceCategory `json:"category"`
+	Description string              `json:"description"`
+
+	// ImageKeys fileKey values from the upload-url endpoint, after uploading
+	ImageKeys *[]string `json:"imageKeys,omitempty"`
+}
+
 // CreateRecurringChargeRequest defines model for CreateRecurringChargeRequest.
 type CreateRecurringChargeRequest struct {
 	Active *bool `json:"active,omitempty"`
@@ -266,6 +383,9 @@ type Invoice struct {
 	PaidAt        *time.Time    `json:"paidAt,omitempty"`
 	RoomNumber    string        `json:"roomNumber"`
 
+	// Slips Payment slips of this invoice, oldest first (an invoice may have several)
+	Slips []PaymentSlip `json:"slips"`
+
 	// Status Computed by the backend from the stored status, slips and due date
 	Status BillDisplayStatus `json:"status"`
 
@@ -288,6 +408,21 @@ type InvoiceLine struct {
 // InvoiceLineType defines model for InvoiceLineType.
 type InvoiceLineType string
 
+// InvoiceSummary defines model for InvoiceSummary.
+type InvoiceSummary struct {
+	// BillingPeriod Example: 2026-11
+	BillingPeriod BillingPeriod      `json:"billingPeriod"`
+	DueDate       openapi_types.Date `json:"dueDate"`
+	Id            openapi_types.UUID `json:"id"`
+	InvoiceNumber string             `json:"invoiceNumber"`
+
+	// Status Computed by the backend from the stored status, slips and due date
+	Status BillDisplayStatus `json:"status"`
+
+	// Total Example: 4512.00
+	Total Money `json:"total"`
+}
+
 // Lease defines model for Lease.
 type Lease struct {
 	EndDate    openapi_types.Date `json:"endDate"`
@@ -308,6 +443,26 @@ type LoginRequest struct {
 	Password string `json:"password"`
 	Username string `json:"username"`
 }
+
+// MaintenanceCategory defines model for MaintenanceCategory.
+type MaintenanceCategory string
+
+// MaintenanceRequest defines model for MaintenanceRequest.
+type MaintenanceRequest struct {
+	Category    MaintenanceCategory `json:"category"`
+	CreatedAt   time.Time           `json:"createdAt"`
+	Description string              `json:"description"`
+	Id          openapi_types.UUID  `json:"id"`
+
+	// Images Short-lived signed URLs (5 minutes), at most 3
+	Images     []string          `json:"images"`
+	RoomNumber string            `json:"roomNumber"`
+	Status     MaintenanceStatus `json:"status"`
+	UpdatedAt  time.Time         `json:"updatedAt"`
+}
+
+// MaintenanceStatus defines model for MaintenanceStatus.
+type MaintenanceStatus string
 
 // Me defines model for Me.
 type Me struct {
@@ -347,6 +502,22 @@ type MeterInput struct {
 // Money Example: 4512.00
 type Money = string
 
+// PaymentSlip defines model for PaymentSlip.
+type PaymentSlip struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// ImageUrl Short-lived signed URL (5 minutes); do not cache
+	ImageUrl string `json:"imageUrl"`
+
+	// PossibleDuplicate The same file was submitted before (warning only)
+	PossibleDuplicate bool              `json:"possibleDuplicate"`
+	RejectNote        *string           `json:"rejectNote,omitempty"`
+	RejectReason      *SlipRejectReason `json:"rejectReason,omitempty"`
+	ReviewedAt        *time.Time        `json:"reviewedAt,omitempty"`
+	Status            SlipStatus        `json:"status"`
+	SubmittedAt       time.Time         `json:"submittedAt"`
+}
+
 // Problem defines model for Problem.
 type Problem struct {
 	// Code Stable UPPER_SNAKE_CASE error code, mapped to a Thai message by the frontend
@@ -381,6 +552,12 @@ type RegisterTenantRequest struct {
 
 	// Username 3–32 characters, a–z 0–9 . _ -
 	Username string `json:"username"`
+}
+
+// RejectSlipRequest defines model for RejectSlipRequest.
+type RejectSlipRequest struct {
+	Note   *string          `json:"note,omitempty"`
+	Reason SlipRejectReason `json:"reason"`
 }
 
 // ResetPasswordRequest defines model for ResetPasswordRequest.
@@ -443,6 +620,24 @@ type SetMetersRequest struct {
 	Water       *MeterInput `json:"water,omitempty"`
 }
 
+// SlipQueueItem defines model for SlipQueueItem.
+type SlipQueueItem struct {
+	Invoice    InvoiceSummary `json:"invoice"`
+	RoomNumber string         `json:"roomNumber"`
+	Slip       PaymentSlip    `json:"slip"`
+}
+
+// SlipRejectReason defines model for SlipRejectReason.
+type SlipRejectReason string
+
+// SlipStatus defines model for SlipStatus.
+type SlipStatus string
+
+// SubmitSlipRequest defines model for SubmitSlipRequest.
+type SubmitSlipRequest struct {
+	FileKey string `json:"fileKey"`
+}
+
 // TenantAccount defines model for TenantAccount.
 type TenantAccount struct {
 	FullName     string             `json:"fullName"`
@@ -462,6 +657,11 @@ type TenantRoom struct {
 	RoomNumber  string `json:"roomNumber"`
 }
 
+// UpdateMaintenanceStatusRequest defines model for UpdateMaintenanceStatusRequest.
+type UpdateMaintenanceStatusRequest struct {
+	Status MaintenanceStatus `json:"status"`
+}
+
 // UpdateRecurringChargeRequest defines model for UpdateRecurringChargeRequest.
 type UpdateRecurringChargeRequest struct {
 	Active *bool `json:"active,omitempty"`
@@ -477,6 +677,32 @@ type UpdateRoomRequest struct {
 	BasePrice           *Money `json:"basePrice,omitempty"`
 	ElectricMeterDigits *int   `json:"electricMeterDigits,omitempty"`
 	WaterMeterDigits    *int   `json:"waterMeterDigits,omitempty"`
+}
+
+// UploadRequest defines model for UploadRequest.
+type UploadRequest struct {
+	ContentType UploadRequestContentType `json:"contentType"`
+
+	// SizeBytes Exact file size; it is part of the signature (max 5 MB)
+	SizeBytes int64 `json:"sizeBytes"`
+}
+
+// UploadRequestContentType defines model for UploadRequest.ContentType.
+type UploadRequestContentType string
+
+// UploadUrl defines model for UploadUrl.
+type UploadUrl struct {
+	ExpiresAt time.Time `json:"expiresAt"`
+
+	// FileKey Pass this back to the API after the upload succeeds
+	FileKey string `json:"fileKey"`
+
+	// Headers Send these headers unchanged with the upload
+	Headers map[string]string `json:"headers"`
+
+	// Method Example: PUT
+	Method    string `json:"method"`
+	UploadUrl string `json:"uploadUrl"`
 }
 
 // UsageCheck defines model for UsageCheck.
@@ -524,15 +750,31 @@ type LeaseId = openapi_types.UUID
 // Period Example: 2026-11
 type Period = BillingPeriod
 
+// RequestId defines model for RequestId.
+type RequestId = openapi_types.UUID
+
 // RoomNumber defines model for RoomNumber.
 type RoomNumber = string
+
+// SlipId defines model for SlipId.
+type SlipId = openapi_types.UUID
 
 // LoggedIn defines model for LoggedIn.
 type LoggedIn = Me
 
+// ListMaintenanceRequestsParams defines parameters for ListMaintenanceRequests.
+type ListMaintenanceRequestsParams struct {
+	Status *MaintenanceStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
 // ListRoomsParams defines parameters for ListRooms.
 type ListRoomsParams struct {
 	Floor *int `form:"floor,omitempty" json:"floor,omitempty"`
+}
+
+// ListSlipsParams defines parameters for ListSlips.
+type ListSlipsParams struct {
+	Status *SlipStatus `form:"status,omitempty" json:"status,omitempty"`
 }
 
 // ListTenantAccountsParams defines parameters for ListTenantAccounts.
@@ -549,6 +791,9 @@ type SetInvoiceMetersJSONRequestBody = SetMetersRequest
 // UpdateLeaseJSONRequestBody defines body for UpdateLease for application/json ContentType.
 type UpdateLeaseJSONRequestBody = LeaseRequest
 
+// UpdateMaintenanceStatusJSONRequestBody defines body for UpdateMaintenanceStatus for application/json ContentType.
+type UpdateMaintenanceStatusJSONRequestBody = UpdateMaintenanceStatusRequest
+
 // UpdateRecurringChargeJSONRequestBody defines body for UpdateRecurringCharge for application/json ContentType.
 type UpdateRecurringChargeJSONRequestBody = UpdateRecurringChargeRequest
 
@@ -560,6 +805,9 @@ type CreateLeaseJSONRequestBody = LeaseRequest
 
 // CreateRecurringChargeJSONRequestBody defines body for CreateRecurringCharge for application/json ContentType.
 type CreateRecurringChargeJSONRequestBody = CreateRecurringChargeRequest
+
+// RejectSlipJSONRequestBody defines body for RejectSlip for application/json ContentType.
+type RejectSlipJSONRequestBody = RejectSlipRequest
 
 // AssignRoomJSONRequestBody defines body for AssignRoom for application/json ContentType.
 type AssignRoomJSONRequestBody = AssignRoomRequest
@@ -578,6 +826,18 @@ type TenantLoginJSONRequestBody = LoginRequest
 
 // RegisterTenantJSONRequestBody defines body for RegisterTenant for application/json ContentType.
 type RegisterTenantJSONRequestBody = RegisterTenantRequest
+
+// SubmitSlipJSONRequestBody defines body for SubmitSlip for application/json ContentType.
+type SubmitSlipJSONRequestBody = SubmitSlipRequest
+
+// CreateSlipUploadUrlJSONRequestBody defines body for CreateSlipUploadUrl for application/json ContentType.
+type CreateSlipUploadUrlJSONRequestBody = UploadRequest
+
+// CreateMaintenanceRequestJSONRequestBody defines body for CreateMaintenanceRequest for application/json ContentType.
+type CreateMaintenanceRequestJSONRequestBody = CreateMaintenanceRequest
+
+// CreateMaintenanceUploadUrlJSONRequestBody defines body for CreateMaintenanceUploadUrl for application/json ContentType.
+type CreateMaintenanceUploadUrlJSONRequestBody = UploadRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -605,6 +865,15 @@ type ServerInterface interface {
 	// UpdateLease Edit a lease (M-07)
 	// (PATCH /admin/leases/{leaseId})
 	UpdateLease(c *gin.Context, leaseId LeaseId)
+	// ListMaintenanceRequests All repair requests (P-A09), newest first
+	// (GET /admin/maintenance-requests)
+	ListMaintenanceRequests(c *gin.Context, params ListMaintenanceRequestsParams)
+
+	// (GET /admin/maintenance-requests/{requestId})
+	GetMaintenanceRequest(c *gin.Context, requestId RequestId)
+	// UpdateMaintenanceStatus Move a request forward; steps may be skipped, never reversed (§6.6)
+	// (PATCH /admin/maintenance-requests/{requestId}/status)
+	UpdateMaintenanceStatus(c *gin.Context, requestId RequestId)
 	// UpdateRecurringCharge Edit or switch a monthly service charge on/off (M-08)
 	// (PATCH /admin/recurring-charges/{chargeId})
 	UpdateRecurringCharge(c *gin.Context, chargeId ChargeId)
@@ -623,6 +892,15 @@ type ServerInterface interface {
 	// CreateRecurringCharge Add a monthly service charge (M-08)
 	// (POST /admin/rooms/{roomNumber}/recurring-charges)
 	CreateRecurringCharge(c *gin.Context, roomNumber RoomNumber)
+	// ListSlips Slip verification queue (P-A07), oldest first
+	// (GET /admin/slips)
+	ListSlips(c *gin.Context, params ListSlipsParams)
+	// ApproveSlip Approve a slip; an ISSUED invoice becomes PAID in the same transaction
+	// (POST /admin/slips/{slipId}/approve)
+	ApproveSlip(c *gin.Context, slipId SlipId)
+	// RejectSlip Reject a slip with a reason (M-05); the tenant can submit another
+	// (POST /admin/slips/{slipId}/reject)
+	RejectSlip(c *gin.Context, slipId SlipId)
 	// ListTenantAccounts Tenant accounts by status (P-A08 tabs)
 	// (GET /admin/tenant-accounts)
 	ListTenantAccounts(c *gin.Context, params ListTenantAccountsParams)
@@ -659,6 +937,30 @@ type ServerInterface interface {
 	// GetHealth Liveness and database check
 	// (GET /health)
 	GetHealth(c *gin.Context)
+	// ListTenantInvoices Invoices of the tenant's room (issued and paid; drafts are hidden), newest first
+	// (GET /tenant/invoices)
+	ListTenantInvoices(c *gin.Context)
+	// GetTenantInvoice Invoice detail with slips (P-T06). 404 for another room's invoice.
+	// (GET /tenant/invoices/{invoiceId})
+	GetTenantInvoice(c *gin.Context, invoiceId InvoiceId)
+	// SubmitSlip Step 3 — confirm the uploaded slip (M-11). The invoice shows PENDING_VERIFICATION.
+	// (POST /tenant/invoices/{invoiceId}/slips)
+	SubmitSlip(c *gin.Context, invoiceId InvoiceId)
+	// CreateSlipUploadUrl Step 1 — get a presigned URL to upload a slip image directly to storage
+	// (POST /tenant/invoices/{invoiceId}/slips/upload-url)
+	CreateSlipUploadUrl(c *gin.Context, invoiceId InvoiceId)
+	// ListTenantMaintenanceRequests Repair requests of the tenant's room, newest first
+	// (GET /tenant/maintenance-requests)
+	ListTenantMaintenanceRequests(c *gin.Context)
+	// CreateMaintenanceRequest Report a repair (P-T09)
+	// (POST /tenant/maintenance-requests)
+	CreateMaintenanceRequest(c *gin.Context)
+	// CreateMaintenanceUploadUrl Get a presigned URL to upload one repair photo (up to 3 per request)
+	// (POST /tenant/maintenance-requests/upload-url)
+	CreateMaintenanceUploadUrl(c *gin.Context)
+	// GetTenantMaintenanceRequest One repair request of the tenant's room; 404 for another room's
+	// (GET /tenant/maintenance-requests/{requestId})
+	GetTenantMaintenanceRequest(c *gin.Context, requestId RequestId)
 	// GetTenantRoom The room the logged-in tenant is bound to
 	// (GET /tenant/room)
 	GetTenantRoom(c *gin.Context)
@@ -900,6 +1202,83 @@ func (siw *ServerInterfaceWrapper) UpdateLease(c *gin.Context) {
 	siw.Handler.UpdateLease(c, leaseId)
 }
 
+// ListMaintenanceRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListMaintenanceRequests(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMaintenanceRequestsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", c.Request.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter status: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListMaintenanceRequests(c, params)
+}
+
+// GetMaintenanceRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetMaintenanceRequest(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", c.Param("requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter requestId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetMaintenanceRequest(c, requestId)
+}
+
+// UpdateMaintenanceStatus operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMaintenanceStatus(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", c.Param("requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter requestId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateMaintenanceStatus(c, requestId)
+}
+
 // UpdateRecurringCharge operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRecurringCharge(c *gin.Context) {
 
@@ -1050,6 +1429,83 @@ func (siw *ServerInterfaceWrapper) CreateRecurringCharge(c *gin.Context) {
 	}
 
 	siw.Handler.CreateRecurringCharge(c, roomNumber)
+}
+
+// ListSlips operation middleware
+func (siw *ServerInterfaceWrapper) ListSlips(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSlipsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", c.Request.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter status: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListSlips(c, params)
+}
+
+// ApproveSlip operation middleware
+func (siw *ServerInterfaceWrapper) ApproveSlip(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slipId" -------------
+	var slipId SlipId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slipId", c.Param("slipId"), &slipId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slipId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ApproveSlip(c, slipId)
+}
+
+// RejectSlip operation middleware
+func (siw *ServerInterfaceWrapper) RejectSlip(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slipId" -------------
+	var slipId SlipId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slipId", c.Param("slipId"), &slipId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter slipId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RejectSlip(c, slipId)
 }
 
 // ListTenantAccounts operation middleware
@@ -1258,6 +1714,158 @@ func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 	siw.Handler.GetHealth(c)
 }
 
+// ListTenantInvoices operation middleware
+func (siw *ServerInterfaceWrapper) ListTenantInvoices(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTenantInvoices(c)
+}
+
+// GetTenantInvoice operation middleware
+func (siw *ServerInterfaceWrapper) GetTenantInvoice(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTenantInvoice(c, invoiceId)
+}
+
+// SubmitSlip operation middleware
+func (siw *ServerInterfaceWrapper) SubmitSlip(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubmitSlip(c, invoiceId)
+}
+
+// CreateSlipUploadUrl operation middleware
+func (siw *ServerInterfaceWrapper) CreateSlipUploadUrl(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invoiceId" -------------
+	var invoiceId InvoiceId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invoiceId", c.Param("invoiceId"), &invoiceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter invoiceId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateSlipUploadUrl(c, invoiceId)
+}
+
+// ListTenantMaintenanceRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListTenantMaintenanceRequests(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTenantMaintenanceRequests(c)
+}
+
+// CreateMaintenanceRequest operation middleware
+func (siw *ServerInterfaceWrapper) CreateMaintenanceRequest(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateMaintenanceRequest(c)
+}
+
+// CreateMaintenanceUploadUrl operation middleware
+func (siw *ServerInterfaceWrapper) CreateMaintenanceUploadUrl(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateMaintenanceUploadUrl(c)
+}
+
+// GetTenantMaintenanceRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetTenantMaintenanceRequest(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "requestId" -------------
+	var requestId RequestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "requestId", c.Param("requestId"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter requestId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTenantMaintenanceRequest(c, requestId)
+}
+
 // GetTenantRoom operation middleware
 func (siw *ServerInterfaceWrapper) GetTenantRoom(c *gin.Context) {
 
@@ -1325,6 +1933,20 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/admin/invoices/:invoiceId/lines", wrapper.AddInvoiceLine)
 	router.DELETE(options.BaseURL+"/admin/invoices/:invoiceId/lines/:lineId", wrapper.RemoveInvoiceLine)
 	router.POST(options.BaseURL+"/admin/invoices/:invoiceId/issue", wrapper.IssueInvoice)
+	router.GET(options.BaseURL+"/tenant/invoices", wrapper.ListTenantInvoices)
+	router.GET(options.BaseURL+"/tenant/invoices/:invoiceId", wrapper.GetTenantInvoice)
+	router.POST(options.BaseURL+"/tenant/invoices/:invoiceId/slips/upload-url", wrapper.CreateSlipUploadUrl)
+	router.POST(options.BaseURL+"/tenant/invoices/:invoiceId/slips", wrapper.SubmitSlip)
+	router.GET(options.BaseURL+"/admin/slips", wrapper.ListSlips)
+	router.POST(options.BaseURL+"/admin/slips/:slipId/approve", wrapper.ApproveSlip)
+	router.POST(options.BaseURL+"/admin/slips/:slipId/reject", wrapper.RejectSlip)
+	router.POST(options.BaseURL+"/tenant/maintenance-requests/upload-url", wrapper.CreateMaintenanceUploadUrl)
+	router.GET(options.BaseURL+"/tenant/maintenance-requests", wrapper.ListTenantMaintenanceRequests)
+	router.POST(options.BaseURL+"/tenant/maintenance-requests", wrapper.CreateMaintenanceRequest)
+	router.GET(options.BaseURL+"/tenant/maintenance-requests/:requestId", wrapper.GetTenantMaintenanceRequest)
+	router.GET(options.BaseURL+"/admin/maintenance-requests", wrapper.ListMaintenanceRequests)
+	router.GET(options.BaseURL+"/admin/maintenance-requests/:requestId", wrapper.GetMaintenanceRequest)
+	router.PATCH(options.BaseURL+"/admin/maintenance-requests/:requestId/status", wrapper.UpdateMaintenanceStatus)
 }
 
 type InvoiceJSONResponse Invoice
@@ -1338,7 +1960,13 @@ type LoggedInJSONResponse struct {
 	Headers LoggedInResponseHeaders
 }
 
+type MaintenanceRequestJSONResponse MaintenanceRequest
+
 type ProblemApplicationProblemPlusJSONResponse Problem
+
+type SlipQueueItemJSONResponse SlipQueueItem
+
+type UploadUrlJSONResponse UploadUrl
 
 type GetRoomInvoiceRequestObject struct {
 	Period     Period     `json:"period"`
@@ -1658,6 +2286,124 @@ func (response UpdateLeasedefaultApplicationProblemPlusJSONResponse) VisitUpdate
 	return err
 }
 
+type ListMaintenanceRequestsRequestObject struct {
+	Params ListMaintenanceRequestsParams
+}
+
+type ListMaintenanceRequestsResponseObject interface {
+	VisitListMaintenanceRequestsResponse(w http.ResponseWriter) error
+}
+
+type ListMaintenanceRequests200JSONResponse []MaintenanceRequest
+
+func (response ListMaintenanceRequests200JSONResponse) VisitListMaintenanceRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMaintenanceRequestsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListMaintenanceRequestsdefaultApplicationProblemPlusJSONResponse) VisitListMaintenanceRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMaintenanceRequestRequestObject struct {
+	RequestId RequestId `json:"requestId"`
+}
+
+type GetMaintenanceRequestResponseObject interface {
+	VisitGetMaintenanceRequestResponse(w http.ResponseWriter) error
+}
+
+type GetMaintenanceRequest200JSONResponse struct{ MaintenanceRequestJSONResponse }
+
+func (response GetMaintenanceRequest200JSONResponse) VisitGetMaintenanceRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMaintenanceRequestdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetMaintenanceRequestdefaultApplicationProblemPlusJSONResponse) VisitGetMaintenanceRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMaintenanceStatusRequestObject struct {
+	RequestId RequestId `json:"requestId"`
+	Body      *UpdateMaintenanceStatusJSONRequestBody
+}
+
+type UpdateMaintenanceStatusResponseObject interface {
+	VisitUpdateMaintenanceStatusResponse(w http.ResponseWriter) error
+}
+
+type UpdateMaintenanceStatus200JSONResponse struct{ MaintenanceRequestJSONResponse }
+
+func (response UpdateMaintenanceStatus200JSONResponse) VisitUpdateMaintenanceStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMaintenanceStatusdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateMaintenanceStatusdefaultApplicationProblemPlusJSONResponse) VisitUpdateMaintenanceStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateRecurringChargeRequestObject struct {
 	ChargeId ChargeId `json:"chargeId"`
 	Body     *UpdateRecurringChargeJSONRequestBody
@@ -1885,6 +2631,124 @@ type CreateRecurringChargedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response CreateRecurringChargedefaultApplicationProblemPlusJSONResponse) VisitCreateRecurringChargeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlipsRequestObject struct {
+	Params ListSlipsParams
+}
+
+type ListSlipsResponseObject interface {
+	VisitListSlipsResponse(w http.ResponseWriter) error
+}
+
+type ListSlips200JSONResponse []SlipQueueItem
+
+func (response ListSlips200JSONResponse) VisitListSlipsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSlipsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListSlipsdefaultApplicationProblemPlusJSONResponse) VisitListSlipsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSlipRequestObject struct {
+	SlipId SlipId `json:"slipId"`
+}
+
+type ApproveSlipResponseObject interface {
+	VisitApproveSlipResponse(w http.ResponseWriter) error
+}
+
+type ApproveSlip200JSONResponse struct{ SlipQueueItemJSONResponse }
+
+func (response ApproveSlip200JSONResponse) VisitApproveSlipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveSlipdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ApproveSlipdefaultApplicationProblemPlusJSONResponse) VisitApproveSlipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectSlipRequestObject struct {
+	SlipId SlipId `json:"slipId"`
+	Body   *RejectSlipJSONRequestBody
+}
+
+type RejectSlipResponseObject interface {
+	VisitRejectSlipResponse(w http.ResponseWriter) error
+}
+
+type RejectSlip200JSONResponse struct{ SlipQueueItemJSONResponse }
+
+func (response RejectSlip200JSONResponse) VisitRejectSlipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectSlipdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response RejectSlipdefaultApplicationProblemPlusJSONResponse) VisitRejectSlipResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2364,6 +3228,318 @@ func (response GetHealthdefaultApplicationProblemPlusJSONResponse) VisitGetHealt
 	return err
 }
 
+type ListTenantInvoicesRequestObject struct {
+}
+
+type ListTenantInvoicesResponseObject interface {
+	VisitListTenantInvoicesResponse(w http.ResponseWriter) error
+}
+
+type ListTenantInvoices200JSONResponse []InvoiceSummary
+
+func (response ListTenantInvoices200JSONResponse) VisitListTenantInvoicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantInvoicesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListTenantInvoicesdefaultApplicationProblemPlusJSONResponse) VisitListTenantInvoicesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantInvoiceRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+}
+
+type GetTenantInvoiceResponseObject interface {
+	VisitGetTenantInvoiceResponse(w http.ResponseWriter) error
+}
+
+type GetTenantInvoice200JSONResponse struct{ InvoiceJSONResponse }
+
+func (response GetTenantInvoice200JSONResponse) VisitGetTenantInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantInvoicedefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTenantInvoicedefaultApplicationProblemPlusJSONResponse) VisitGetTenantInvoiceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSlipRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+	Body      *SubmitSlipJSONRequestBody
+}
+
+type SubmitSlipResponseObject interface {
+	VisitSubmitSlipResponse(w http.ResponseWriter) error
+}
+
+type SubmitSlip201JSONResponse PaymentSlip
+
+func (response SubmitSlip201JSONResponse) VisitSubmitSlipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitSlipdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitSlipdefaultApplicationProblemPlusJSONResponse) VisitSubmitSlipResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSlipUploadUrlRequestObject struct {
+	InvoiceId InvoiceId `json:"invoiceId"`
+	Body      *CreateSlipUploadUrlJSONRequestBody
+}
+
+type CreateSlipUploadUrlResponseObject interface {
+	VisitCreateSlipUploadUrlResponse(w http.ResponseWriter) error
+}
+
+type CreateSlipUploadUrl200JSONResponse struct{ UploadUrlJSONResponse }
+
+func (response CreateSlipUploadUrl200JSONResponse) VisitCreateSlipUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSlipUploadUrldefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateSlipUploadUrldefaultApplicationProblemPlusJSONResponse) VisitCreateSlipUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantMaintenanceRequestsRequestObject struct {
+}
+
+type ListTenantMaintenanceRequestsResponseObject interface {
+	VisitListTenantMaintenanceRequestsResponse(w http.ResponseWriter) error
+}
+
+type ListTenantMaintenanceRequests200JSONResponse []MaintenanceRequest
+
+func (response ListTenantMaintenanceRequests200JSONResponse) VisitListTenantMaintenanceRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantMaintenanceRequestsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListTenantMaintenanceRequestsdefaultApplicationProblemPlusJSONResponse) VisitListTenantMaintenanceRequestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMaintenanceRequestRequestObject struct {
+	Body *CreateMaintenanceRequestJSONRequestBody
+}
+
+type CreateMaintenanceRequestResponseObject interface {
+	VisitCreateMaintenanceRequestResponse(w http.ResponseWriter) error
+}
+
+type CreateMaintenanceRequest201JSONResponse struct{ MaintenanceRequestJSONResponse }
+
+func (response CreateMaintenanceRequest201JSONResponse) VisitCreateMaintenanceRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMaintenanceRequestdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateMaintenanceRequestdefaultApplicationProblemPlusJSONResponse) VisitCreateMaintenanceRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMaintenanceUploadUrlRequestObject struct {
+	Body *CreateMaintenanceUploadUrlJSONRequestBody
+}
+
+type CreateMaintenanceUploadUrlResponseObject interface {
+	VisitCreateMaintenanceUploadUrlResponse(w http.ResponseWriter) error
+}
+
+type CreateMaintenanceUploadUrl200JSONResponse struct{ UploadUrlJSONResponse }
+
+func (response CreateMaintenanceUploadUrl200JSONResponse) VisitCreateMaintenanceUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMaintenanceUploadUrldefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateMaintenanceUploadUrldefaultApplicationProblemPlusJSONResponse) VisitCreateMaintenanceUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantMaintenanceRequestRequestObject struct {
+	RequestId RequestId `json:"requestId"`
+}
+
+type GetTenantMaintenanceRequestResponseObject interface {
+	VisitGetTenantMaintenanceRequestResponse(w http.ResponseWriter) error
+}
+
+type GetTenantMaintenanceRequest200JSONResponse struct{ MaintenanceRequestJSONResponse }
+
+func (response GetTenantMaintenanceRequest200JSONResponse) VisitGetTenantMaintenanceRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantMaintenanceRequestdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTenantMaintenanceRequestdefaultApplicationProblemPlusJSONResponse) VisitGetTenantMaintenanceRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetTenantRoomRequestObject struct {
 }
 
@@ -2428,6 +3604,15 @@ type StrictServerInterface interface {
 	// UpdateLease Edit a lease (M-07)
 	// (PATCH /admin/leases/{leaseId})
 	UpdateLease(ctx context.Context, request UpdateLeaseRequestObject) (UpdateLeaseResponseObject, error)
+	// ListMaintenanceRequests All repair requests (P-A09), newest first
+	// (GET /admin/maintenance-requests)
+	ListMaintenanceRequests(ctx context.Context, request ListMaintenanceRequestsRequestObject) (ListMaintenanceRequestsResponseObject, error)
+
+	// (GET /admin/maintenance-requests/{requestId})
+	GetMaintenanceRequest(ctx context.Context, request GetMaintenanceRequestRequestObject) (GetMaintenanceRequestResponseObject, error)
+	// UpdateMaintenanceStatus Move a request forward; steps may be skipped, never reversed (§6.6)
+	// (PATCH /admin/maintenance-requests/{requestId}/status)
+	UpdateMaintenanceStatus(ctx context.Context, request UpdateMaintenanceStatusRequestObject) (UpdateMaintenanceStatusResponseObject, error)
 	// UpdateRecurringCharge Edit or switch a monthly service charge on/off (M-08)
 	// (PATCH /admin/recurring-charges/{chargeId})
 	UpdateRecurringCharge(ctx context.Context, request UpdateRecurringChargeRequestObject) (UpdateRecurringChargeResponseObject, error)
@@ -2446,6 +3631,15 @@ type StrictServerInterface interface {
 	// CreateRecurringCharge Add a monthly service charge (M-08)
 	// (POST /admin/rooms/{roomNumber}/recurring-charges)
 	CreateRecurringCharge(ctx context.Context, request CreateRecurringChargeRequestObject) (CreateRecurringChargeResponseObject, error)
+	// ListSlips Slip verification queue (P-A07), oldest first
+	// (GET /admin/slips)
+	ListSlips(ctx context.Context, request ListSlipsRequestObject) (ListSlipsResponseObject, error)
+	// ApproveSlip Approve a slip; an ISSUED invoice becomes PAID in the same transaction
+	// (POST /admin/slips/{slipId}/approve)
+	ApproveSlip(ctx context.Context, request ApproveSlipRequestObject) (ApproveSlipResponseObject, error)
+	// RejectSlip Reject a slip with a reason (M-05); the tenant can submit another
+	// (POST /admin/slips/{slipId}/reject)
+	RejectSlip(ctx context.Context, request RejectSlipRequestObject) (RejectSlipResponseObject, error)
 	// ListTenantAccounts Tenant accounts by status (P-A08 tabs)
 	// (GET /admin/tenant-accounts)
 	ListTenantAccounts(ctx context.Context, request ListTenantAccountsRequestObject) (ListTenantAccountsResponseObject, error)
@@ -2482,6 +3676,30 @@ type StrictServerInterface interface {
 	// GetHealth Liveness and database check
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// ListTenantInvoices Invoices of the tenant's room (issued and paid; drafts are hidden), newest first
+	// (GET /tenant/invoices)
+	ListTenantInvoices(ctx context.Context, request ListTenantInvoicesRequestObject) (ListTenantInvoicesResponseObject, error)
+	// GetTenantInvoice Invoice detail with slips (P-T06). 404 for another room's invoice.
+	// (GET /tenant/invoices/{invoiceId})
+	GetTenantInvoice(ctx context.Context, request GetTenantInvoiceRequestObject) (GetTenantInvoiceResponseObject, error)
+	// SubmitSlip Step 3 — confirm the uploaded slip (M-11). The invoice shows PENDING_VERIFICATION.
+	// (POST /tenant/invoices/{invoiceId}/slips)
+	SubmitSlip(ctx context.Context, request SubmitSlipRequestObject) (SubmitSlipResponseObject, error)
+	// CreateSlipUploadUrl Step 1 — get a presigned URL to upload a slip image directly to storage
+	// (POST /tenant/invoices/{invoiceId}/slips/upload-url)
+	CreateSlipUploadUrl(ctx context.Context, request CreateSlipUploadUrlRequestObject) (CreateSlipUploadUrlResponseObject, error)
+	// ListTenantMaintenanceRequests Repair requests of the tenant's room, newest first
+	// (GET /tenant/maintenance-requests)
+	ListTenantMaintenanceRequests(ctx context.Context, request ListTenantMaintenanceRequestsRequestObject) (ListTenantMaintenanceRequestsResponseObject, error)
+	// CreateMaintenanceRequest Report a repair (P-T09)
+	// (POST /tenant/maintenance-requests)
+	CreateMaintenanceRequest(ctx context.Context, request CreateMaintenanceRequestRequestObject) (CreateMaintenanceRequestResponseObject, error)
+	// CreateMaintenanceUploadUrl Get a presigned URL to upload one repair photo (up to 3 per request)
+	// (POST /tenant/maintenance-requests/upload-url)
+	CreateMaintenanceUploadUrl(ctx context.Context, request CreateMaintenanceUploadUrlRequestObject) (CreateMaintenanceUploadUrlResponseObject, error)
+	// GetTenantMaintenanceRequest One repair request of the tenant's room; 404 for another room's
+	// (GET /tenant/maintenance-requests/{requestId})
+	GetTenantMaintenanceRequest(ctx context.Context, request GetTenantMaintenanceRequestRequestObject) (GetTenantMaintenanceRequestResponseObject, error)
 	// GetTenantRoom The room the logged-in tenant is bound to
 	// (GET /tenant/room)
 	GetTenantRoom(ctx context.Context, request GetTenantRoomRequestObject) (GetTenantRoomResponseObject, error)
@@ -2809,6 +4027,102 @@ func (sh *strictHandler) UpdateLease(ctx *gin.Context, leaseId LeaseId) {
 	}
 }
 
+// ListMaintenanceRequests operation middleware
+func (sh *strictHandler) ListMaintenanceRequests(ctx *gin.Context, params ListMaintenanceRequestsParams) {
+	var request ListMaintenanceRequestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMaintenanceRequests(ctx, request.(ListMaintenanceRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMaintenanceRequests")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListMaintenanceRequestsResponseObject); ok {
+		if err := validResponse.VisitListMaintenanceRequestsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMaintenanceRequest operation middleware
+func (sh *strictHandler) GetMaintenanceRequest(ctx *gin.Context, requestId RequestId) {
+	var request GetMaintenanceRequestRequestObject
+
+	request.RequestId = requestId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMaintenanceRequest(ctx, request.(GetMaintenanceRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMaintenanceRequest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetMaintenanceRequestResponseObject); ok {
+		if err := validResponse.VisitGetMaintenanceRequestResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateMaintenanceStatus operation middleware
+func (sh *strictHandler) UpdateMaintenanceStatus(ctx *gin.Context, requestId RequestId) {
+	var request UpdateMaintenanceStatusRequestObject
+
+	request.RequestId = requestId
+
+	var body UpdateMaintenanceStatusJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMaintenanceStatus(ctx, request.(UpdateMaintenanceStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMaintenanceStatus")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateMaintenanceStatusResponseObject); ok {
+		if err := validResponse.VisitUpdateMaintenanceStatusResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UpdateRecurringCharge operation middleware
 func (sh *strictHandler) UpdateRecurringCharge(ctx *gin.Context, chargeId ChargeId) {
 	var request UpdateRecurringChargeRequestObject
@@ -3030,6 +4344,102 @@ func (sh *strictHandler) CreateRecurringCharge(ctx *gin.Context, roomNumber Room
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(CreateRecurringChargeResponseObject); ok {
 		if err := validResponse.VisitCreateRecurringChargeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSlips operation middleware
+func (sh *strictHandler) ListSlips(ctx *gin.Context, params ListSlipsParams) {
+	var request ListSlipsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSlips(ctx, request.(ListSlipsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSlips")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListSlipsResponseObject); ok {
+		if err := validResponse.VisitListSlipsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveSlip operation middleware
+func (sh *strictHandler) ApproveSlip(ctx *gin.Context, slipId SlipId) {
+	var request ApproveSlipRequestObject
+
+	request.SlipId = slipId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveSlip(ctx, request.(ApproveSlipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveSlip")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ApproveSlipResponseObject); ok {
+		if err := validResponse.VisitApproveSlipResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectSlip operation middleware
+func (sh *strictHandler) RejectSlip(ctx *gin.Context, slipId SlipId) {
+	var request RejectSlipRequestObject
+
+	request.SlipId = slipId
+
+	var body RejectSlipJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectSlip(ctx, request.(RejectSlipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectSlip")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RejectSlipResponseObject); ok {
+		if err := validResponse.VisitRejectSlipResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -3441,6 +4851,278 @@ func (sh *strictHandler) GetHealth(ctx *gin.Context) {
 	}
 }
 
+// ListTenantInvoices operation middleware
+func (sh *strictHandler) ListTenantInvoices(ctx *gin.Context) {
+	var request ListTenantInvoicesRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTenantInvoices(ctx, request.(ListTenantInvoicesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTenantInvoices")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTenantInvoicesResponseObject); ok {
+		if err := validResponse.VisitListTenantInvoicesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTenantInvoice operation middleware
+func (sh *strictHandler) GetTenantInvoice(ctx *gin.Context, invoiceId InvoiceId) {
+	var request GetTenantInvoiceRequestObject
+
+	request.InvoiceId = invoiceId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTenantInvoice(ctx, request.(GetTenantInvoiceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTenantInvoice")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTenantInvoiceResponseObject); ok {
+		if err := validResponse.VisitGetTenantInvoiceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitSlip operation middleware
+func (sh *strictHandler) SubmitSlip(ctx *gin.Context, invoiceId InvoiceId) {
+	var request SubmitSlipRequestObject
+
+	request.InvoiceId = invoiceId
+
+	var body SubmitSlipJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitSlip(ctx, request.(SubmitSlipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitSlip")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(SubmitSlipResponseObject); ok {
+		if err := validResponse.VisitSubmitSlipResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSlipUploadUrl operation middleware
+func (sh *strictHandler) CreateSlipUploadUrl(ctx *gin.Context, invoiceId InvoiceId) {
+	var request CreateSlipUploadUrlRequestObject
+
+	request.InvoiceId = invoiceId
+
+	var body CreateSlipUploadUrlJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSlipUploadUrl(ctx, request.(CreateSlipUploadUrlRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSlipUploadUrl")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateSlipUploadUrlResponseObject); ok {
+		if err := validResponse.VisitCreateSlipUploadUrlResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTenantMaintenanceRequests operation middleware
+func (sh *strictHandler) ListTenantMaintenanceRequests(ctx *gin.Context) {
+	var request ListTenantMaintenanceRequestsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTenantMaintenanceRequests(ctx, request.(ListTenantMaintenanceRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTenantMaintenanceRequests")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTenantMaintenanceRequestsResponseObject); ok {
+		if err := validResponse.VisitListTenantMaintenanceRequestsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateMaintenanceRequest operation middleware
+func (sh *strictHandler) CreateMaintenanceRequest(ctx *gin.Context) {
+	var request CreateMaintenanceRequestRequestObject
+
+	var body CreateMaintenanceRequestJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateMaintenanceRequest(ctx, request.(CreateMaintenanceRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateMaintenanceRequest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateMaintenanceRequestResponseObject); ok {
+		if err := validResponse.VisitCreateMaintenanceRequestResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateMaintenanceUploadUrl operation middleware
+func (sh *strictHandler) CreateMaintenanceUploadUrl(ctx *gin.Context) {
+	var request CreateMaintenanceUploadUrlRequestObject
+
+	var body CreateMaintenanceUploadUrlJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateMaintenanceUploadUrl(ctx, request.(CreateMaintenanceUploadUrlRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateMaintenanceUploadUrl")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateMaintenanceUploadUrlResponseObject); ok {
+		if err := validResponse.VisitCreateMaintenanceUploadUrlResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTenantMaintenanceRequest operation middleware
+func (sh *strictHandler) GetTenantMaintenanceRequest(ctx *gin.Context, requestId RequestId) {
+	var request GetTenantMaintenanceRequestRequestObject
+
+	request.RequestId = requestId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTenantMaintenanceRequest(ctx, request.(GetTenantMaintenanceRequestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTenantMaintenanceRequest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTenantMaintenanceRequestResponseObject); ok {
+		if err := validResponse.VisitGetTenantMaintenanceRequestResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetTenantRoom operation middleware
 func (sh *strictHandler) GetTenantRoom(ctx *gin.Context) {
 	var request GetTenantRoomRequestObject
@@ -3470,77 +5152,104 @@ func (sh *strictHandler) GetTenantRoom(ctx *gin.Context) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"yrvFX8rgtPAga4VZ3i7/NwAA//8=",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

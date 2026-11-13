@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"unite-mansion/internal/billing/domain"
+	"unite-mansion/internal/platform/storage"
 	"unite-mansion/internal/shared"
 )
 
@@ -51,6 +52,14 @@ type Repository interface {
 	// IssuedReadingsBefore returns up to 3 issued/paid invoices of the room
 	// before period, newest first (INV-8 default and usage history).
 	IssuedReadingsBefore(ctx context.Context, roomID string, period shared.BillingPeriod) ([]PastReading, error)
+	InvoiceSummariesByRoom(ctx context.Context, roomID string) ([]InvoiceSummary, error) // non-draft, newest first
+
+	InsertSlip(ctx context.Context, s *domain.PaymentSlip) error // ErrSlipAlreadyExists
+	UpdateSlip(ctx context.Context, s *domain.PaymentSlip) error
+	SlipForUpdate(ctx context.Context, id string) (*domain.PaymentSlip, error) // ErrSlipNotFound
+	SlipsByInvoice(ctx context.Context, invoiceID string) ([]SlipView, error)  // oldest first
+	SlipQueue(ctx context.Context, status *domain.SlipStatus) ([]SlipQueueItem, error)
+	SlipQueueItem(ctx context.Context, slipID string) (SlipQueueItem, error)
 }
 
 type EventDispatcher interface {
@@ -60,15 +69,16 @@ type EventDispatcher interface {
 type Service struct {
 	repo    Repository
 	tenancy TenancyReader
+	files   storage.FileStorage
 	tx      shared.TxManager
 	events  EventDispatcher
 	now     func() time.Time
 	newID   func() string
 }
 
-func NewService(repo Repository, tenancy TenancyReader, tx shared.TxManager, events EventDispatcher,
-	now func() time.Time, newID func() string) *Service {
-	return &Service{repo: repo, tenancy: tenancy, tx: tx, events: events, now: now, newID: newID}
+func NewService(repo Repository, tenancy TenancyReader, files storage.FileStorage, tx shared.TxManager,
+	events EventDispatcher, now func() time.Time, newID func() string) *Service {
+	return &Service{repo: repo, tenancy: tenancy, files: files, tx: tx, events: events, now: now, newID: newID}
 }
 
 // --- utility rates ---
@@ -125,13 +135,13 @@ type InvoiceView struct {
 	DueDate       time.Time // date
 	Electricity   domain.UsageCheck
 	Water         domain.UsageCheck
+	Slips         []SlipView
 }
 
 // CreateDraft creates the room's invoice for period, snapshotting prices at
 // today's date in Thai time (INV-4, plan 2.d).
 func (s *Service) CreateDraft(ctx context.Context, period shared.BillingPeriod, roomNumber string) (InvoiceView, error) {
 	var inv *domain.Invoice
-	var history []PastReading
 	err := s.tx.WithinTx(ctx, func(ctx context.Context) error {
 		info, err := s.tenancy.BillingInfo(ctx, roomNumber, period)
 		if err != nil {
@@ -168,7 +178,8 @@ func (s *Service) CreateDraft(ctx context.Context, period shared.BillingPeriod, 
 		if r, ok := domain.RateOn(rates, domain.Water, today); ok {
 			params.WaterRate = &r.PerUnit
 		}
-		if history, err = s.repo.IssuedReadingsBefore(ctx, info.RoomID, period); err != nil {
+		history, err := s.repo.IssuedReadingsBefore(ctx, info.RoomID, period)
+		if err != nil {
 			return err
 		}
 		if len(history) > 0 {
@@ -191,7 +202,7 @@ func (s *Service) CreateDraft(ctx context.Context, period shared.BillingPeriod, 
 	if err != nil {
 		return InvoiceView{}, fmt.Errorf("create draft %s room %s: %w", period, roomNumber, err)
 	}
-	return s.view(inv, history), nil
+	return s.viewWithHistory(ctx, inv)
 }
 
 func (s *Service) GetInvoice(ctx context.Context, id string) (InvoiceView, error) {
@@ -277,23 +288,34 @@ func (s *Service) mutate(ctx context.Context, id, op string, change func(*domain
 	return s.viewWithHistory(ctx, inv)
 }
 
+// viewWithHistory builds the full invoice view: usage warning, slips with
+// signed image URLs and the display status.
 func (s *Service) viewWithHistory(ctx context.Context, inv *domain.Invoice) (InvoiceView, error) {
 	history, err := s.repo.IssuedReadingsBefore(ctx, inv.RoomID(), inv.Period())
 	if err != nil {
 		return InvoiceView{}, fmt.Errorf("usage history: %w", err)
 	}
-	return s.view(inv, history), nil
-}
+	slips, err := s.repo.SlipsByInvoice(ctx, inv.ID())
+	if err != nil {
+		return InvoiceView{}, fmt.Errorf("slips: %w", err)
+	}
+	pending := false
+	for i := range slips {
+		pending = pending || slips[i].Slip.Status == domain.SlipStatusPending
+		if err := s.signSlip(ctx, &slips[i]); err != nil {
+			return InvoiceView{}, err
+		}
+	}
 
-func (s *Service) view(inv *domain.Invoice, history []PastReading) InvoiceView {
 	v := InvoiceView{
 		Invoice:       inv,
-		DisplayStatus: displayStatus(inv, s.now()),
+		DisplayStatus: domain.DisplayStatus(inv, pending, s.now()),
 		DueDate:       shared.DateOf(inv.Period().DueDate()),
+		Slips:         slips,
 	}
 	v.Electricity = usage(inv.Units(domain.Electricity), history, func(p PastReading) *domain.MeterReading { return p.Electric })
 	v.Water = usage(inv.Units(domain.Water), history, func(p PastReading) *domain.MeterReading { return p.Water })
-	return v
+	return v, nil
 }
 
 func usage(current *int64, history []PastReading, pick func(PastReading) *domain.MeterReading) domain.UsageCheck {
@@ -307,19 +329,4 @@ func usage(current *int64, history []PastReading, pick func(PastReading) *domain
 		}
 	}
 	return domain.CheckUsage(*current, units)
-}
-
-// displayStatus derives the §6.1 display status. PENDING_VERIFICATION needs
-// slips, which arrive in Phase 3.
-func displayStatus(inv *domain.Invoice, now time.Time) string {
-	switch inv.Status() {
-	case domain.StatusDraft:
-		return "DRAFT"
-	case domain.StatusPaid:
-		return "PAID"
-	}
-	if inv.Period().IsOverdue(now) {
-		return "OVERDUE"
-	}
-	return "ISSUED"
 }

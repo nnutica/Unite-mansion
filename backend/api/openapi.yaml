@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: B Mansion API
-  version: 0.2.0
+  version: 0.3.0
   description: |
     Contract-first API. Edit this file first, then run `go generate ./...`
     in backend/ and the frontend client generator.
@@ -22,6 +22,8 @@ tags:
   - name: tenant
   - name: utility-rates
   - name: invoices
+  - name: slips
+  - name: maintenance
 
 security:
   - sessionCookie: []
@@ -529,6 +531,251 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  # ---------------------------------------------------------------- slips
+  /tenant/invoices:
+    get:
+      tags: [slips]
+      operationId: listTenantInvoices
+      summary: Invoices of the tenant's room (issued and paid; drafts are hidden), newest first
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceSummary"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/invoices/{invoiceId}:
+    get:
+      tags: [slips]
+      operationId: getTenantInvoice
+      summary: Invoice detail with slips (P-T06). 404 for another room's invoice.
+      parameters:
+        - $ref: "#/components/parameters/InvoiceId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Invoice"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/invoices/{invoiceId}/slips/upload-url:
+    post:
+      tags: [slips]
+      operationId: createSlipUploadUrl
+      summary: Step 1 — get a presigned URL to upload a slip image directly to storage
+      parameters:
+        - $ref: "#/components/parameters/InvoiceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/UploadUrl"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/invoices/{invoiceId}/slips:
+    post:
+      tags: [slips]
+      operationId: submitSlip
+      summary: Step 3 — confirm the uploaded slip (M-11). The invoice shows PENDING_VERIFICATION.
+      parameters:
+        - $ref: "#/components/parameters/InvoiceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitSlipRequest"
+      responses:
+        "201":
+          description: Slip submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSlip"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/slips:
+    get:
+      tags: [slips]
+      operationId: listSlips
+      summary: Slip verification queue (P-A07), oldest first
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SlipStatus"
+      responses:
+        "200":
+          description: Slips with their invoice
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SlipQueueItem"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/slips/{slipId}/approve:
+    post:
+      tags: [slips]
+      operationId: approveSlip
+      summary: Approve a slip; an ISSUED invoice becomes PAID in the same transaction
+      parameters:
+        - $ref: "#/components/parameters/SlipId"
+      responses:
+        "200":
+          $ref: "#/components/responses/SlipQueueItem"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/slips/{slipId}/reject:
+    post:
+      tags: [slips]
+      operationId: rejectSlip
+      summary: Reject a slip with a reason (M-05); the tenant can submit another
+      parameters:
+        - $ref: "#/components/parameters/SlipId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectSlipRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/SlipQueueItem"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  # ---------------------------------------------------------- maintenance
+  /tenant/maintenance-requests/upload-url:
+    post:
+      tags: [maintenance]
+      operationId: createMaintenanceUploadUrl
+      summary: Get a presigned URL to upload one repair photo (up to 3 per request)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/UploadUrl"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/maintenance-requests:
+    get:
+      tags: [maintenance]
+      operationId: listTenantMaintenanceRequests
+      summary: Repair requests of the tenant's room, newest first
+      responses:
+        "200":
+          description: Requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      tags: [maintenance]
+      operationId: createMaintenanceRequest
+      summary: Report a repair (P-T09)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMaintenanceRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/MaintenanceRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/maintenance-requests/{requestId}:
+    get:
+      tags: [maintenance]
+      operationId: getTenantMaintenanceRequest
+      summary: One repair request of the tenant's room; 404 for another room's
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          $ref: "#/components/responses/MaintenanceRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/maintenance-requests:
+    get:
+      tags: [maintenance]
+      operationId: listMaintenanceRequests
+      summary: All repair requests (P-A09), newest first
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/MaintenanceStatus"
+      responses:
+        "200":
+          description: Requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/maintenance-requests/{requestId}:
+    get:
+      tags: [maintenance]
+      operationId: getMaintenanceRequest
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          $ref: "#/components/responses/MaintenanceRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/maintenance-requests/{requestId}/status:
+    patch:
+      tags: [maintenance]
+      operationId: updateMaintenanceStatus
+      summary: Move a request forward; steps may be skipped, never reversed (§6.6)
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMaintenanceStatusRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MaintenanceRequest"
+        default:
+          $ref: "#/components/responses/Problem"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -578,6 +825,20 @@ components:
       description: Billing period yyyy-mm
       schema:
         $ref: "#/components/schemas/BillingPeriod"
+    SlipId:
+      name: slipId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
 
   responses:
     Problem:
@@ -603,6 +864,24 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Invoice"
+    UploadUrl:
+      description: Presigned upload; PUT the file to uploadUrl with exactly these headers before it expires
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UploadUrl"
+    SlipQueueItem:
+      description: Slip with its invoice
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SlipQueueItem"
+    MaintenanceRequest:
+      description: Repair request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MaintenanceRequest"
 
   schemas:
     Health:
@@ -1002,8 +1281,13 @@ components:
 
     Invoice:
       type: object
-      required: [id, invoiceNumber, roomNumber, billingPeriod, dueDate, status, electricity, water, lines, total, abnormalUsage, createdAt]
+      required: [id, invoiceNumber, roomNumber, billingPeriod, dueDate, status, electricity, water, lines, total, abnormalUsage, slips, createdAt]
       properties:
+        slips:
+          type: array
+          description: Payment slips of this invoice, oldest first (an invoice may have several)
+          items:
+            $ref: "#/components/schemas/PaymentSlip"
         id:
           type: string
           format: uuid
@@ -1075,3 +1359,178 @@ components:
           type: string
         amount:
           $ref: "#/components/schemas/Money"
+
+    # uploads
+    UploadRequest:
+      type: object
+      required: [contentType, sizeBytes]
+      properties:
+        contentType:
+          type: string
+          enum: [image/png, image/jpeg]
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5242880
+          description: Exact file size; it is part of the signature (max 5 MB)
+
+    UploadUrl:
+      type: object
+      required: [uploadUrl, method, headers, fileKey, expiresAt]
+      properties:
+        uploadUrl:
+          type: string
+        method:
+          type: string
+          example: PUT
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Send these headers unchanged with the upload
+        fileKey:
+          type: string
+          description: Pass this back to the API after the upload succeeds
+        expiresAt:
+          type: string
+          format: date-time
+
+    # slips
+    SlipStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED]
+
+    SlipRejectReason:
+      type: string
+      enum: [AMOUNT_MISMATCH, DUPLICATE, UNCLEAR]
+
+    PaymentSlip:
+      type: object
+      required: [id, imageUrl, submittedAt, status, possibleDuplicate]
+      properties:
+        id:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+          description: Short-lived signed URL (5 minutes); do not cache
+        submittedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/SlipStatus"
+        possibleDuplicate:
+          type: boolean
+          description: The same file was submitted before (warning only)
+        rejectReason:
+          $ref: "#/components/schemas/SlipRejectReason"
+        rejectNote:
+          type: string
+        reviewedAt:
+          type: string
+          format: date-time
+
+    SubmitSlipRequest:
+      type: object
+      required: [fileKey]
+      properties:
+        fileKey:
+          type: string
+
+    RejectSlipRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          $ref: "#/components/schemas/SlipRejectReason"
+        note:
+          type: string
+
+    InvoiceSummary:
+      type: object
+      required: [id, invoiceNumber, billingPeriod, dueDate, total, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+        billingPeriod:
+          $ref: "#/components/schemas/BillingPeriod"
+        dueDate:
+          type: string
+          format: date
+        total:
+          $ref: "#/components/schemas/Money"
+        status:
+          $ref: "#/components/schemas/BillDisplayStatus"
+
+    SlipQueueItem:
+      type: object
+      required: [slip, invoice, roomNumber]
+      properties:
+        slip:
+          $ref: "#/components/schemas/PaymentSlip"
+        roomNumber:
+          type: string
+        invoice:
+          $ref: "#/components/schemas/InvoiceSummary"
+
+    # maintenance
+    MaintenanceCategory:
+      type: string
+      enum: [WATER, ELECTRICITY, AIR_CONDITIONER, FURNITURE]
+
+    MaintenanceStatus:
+      type: string
+      enum: [NEW, COORDINATING, TECHNICIAN_DISPATCHED, COMPLETED]
+
+    MaintenanceRequest:
+      type: object
+      required: [id, roomNumber, category, description, images, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        roomNumber:
+          type: string
+        category:
+          $ref: "#/components/schemas/MaintenanceCategory"
+        description:
+          type: string
+        images:
+          type: array
+          description: Short-lived signed URLs (5 minutes), at most 3
+          items:
+            type: string
+        status:
+          $ref: "#/components/schemas/MaintenanceStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateMaintenanceRequest:
+      type: object
+      required: [category, description]
+      properties:
+        category:
+          $ref: "#/components/schemas/MaintenanceCategory"
+        description:
+          type: string
+        imageKeys:
+          type: array
+          maxItems: 3
+          description: fileKey values from the upload-url endpoint, after uploading
+          items:
+            type: string
+
+    UpdateMaintenanceStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/MaintenanceStatus"

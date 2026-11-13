@@ -17,7 +17,7 @@ import (
 )
 
 func ErrorMappings() []httpx.ErrorMapping {
-	return []httpx.ErrorMapping{
+	return append([]httpx.ErrorMapping{
 		{Err: domain.ErrInvoiceNotFound, Status: http.StatusNotFound, Code: "INVOICE_NOT_FOUND"},
 		{Err: domain.ErrInvoiceAlreadyExists, Status: http.StatusConflict, Code: "INVOICE_ALREADY_EXISTS"},
 		{Err: domain.ErrInvoiceNotDraft, Status: http.StatusConflict, Code: "INVOICE_NOT_DRAFT"},
@@ -35,7 +35,7 @@ func ErrorMappings() []httpx.ErrorMapping {
 		{Err: domain.ErrInvalidRate, Status: http.StatusUnprocessableEntity, Code: "VALIDATION_FAILED"},
 		{Err: domain.ErrRateNotAfterLatest, Status: http.StatusConflict, Code: "RATE_NOT_AFTER_LATEST"},
 		{Err: app.ErrRoomNotFound, Status: http.StatusNotFound, Code: "ROOM_NOT_FOUND"},
-	}
+	}, slipErrorMappings()...)
 }
 
 type Handler struct {
@@ -175,6 +175,10 @@ func toInvoice(v app.InvoiceView) api.InvoiceJSONResponse {
 		IssuedAt:      inv.IssuedAt(),
 		PaidAt:        inv.PaidAt(),
 		CreatedAt:     inv.CreatedAt(),
+		Slips:         make([]api.PaymentSlip, 0, len(v.Slips)),
+	}
+	for _, s := range v.Slips {
+		out.Slips = append(out.Slips, toSlip(s))
 	}
 	for _, l := range inv.Lines() {
 		line := api.InvoiceLine{Type: api.InvoiceLineType(l.Type), Description: l.Description, Amount: l.Amount.String()}

@@ -147,6 +147,76 @@ func (q *Queries) GetLatestUtilityRate(ctx context.Context, utilityType string) 
 	return i, err
 }
 
+const getSlipForUpdate = `-- name: GetSlipForUpdate :one
+SELECT id, invoice_id, file_key, file_sha256, content_type, size_bytes, status, reject_reason, reject_note, submitted_at, reviewed_at FROM payment_slips WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) GetSlipForUpdate(ctx context.Context, id uuid.UUID) (PaymentSlip, error) {
+	row := q.db.QueryRow(ctx, getSlipForUpdate, id)
+	var i PaymentSlip
+	err := row.Scan(
+		&i.ID,
+		&i.InvoiceID,
+		&i.FileKey,
+		&i.FileSha256,
+		&i.ContentType,
+		&i.SizeBytes,
+		&i.Status,
+		&i.RejectReason,
+		&i.RejectNote,
+		&i.SubmittedAt,
+		&i.ReviewedAt,
+	)
+	return i, err
+}
+
+const getSlipQueueItem = `-- name: GetSlipQueueItem :one
+SELECT s.id, s.invoice_id, s.file_key, s.file_sha256, s.content_type, s.size_bytes, s.status, s.reject_reason, s.reject_note, s.submitted_at, s.reviewed_at,
+       EXISTS (SELECT 1 FROM payment_slips o WHERE o.file_sha256 = s.file_sha256 AND o.id <> s.id)::bool AS possible_duplicate,
+       i.invoice_number, i.room_number, i.billing_period, i.total, i.status AS invoice_status,
+       EXISTS (SELECT 1 FROM payment_slips p WHERE p.invoice_id = i.id AND p.status = 'PENDING')::bool AS has_pending_slip
+FROM payment_slips s
+JOIN invoices i ON i.id = s.invoice_id
+WHERE s.id = $1
+`
+
+type GetSlipQueueItemRow struct {
+	PaymentSlip       PaymentSlip
+	PossibleDuplicate bool
+	InvoiceNumber     string
+	RoomNumber        string
+	BillingPeriod     string
+	Total             decimal.Decimal
+	InvoiceStatus     string
+	HasPendingSlip    bool
+}
+
+func (q *Queries) GetSlipQueueItem(ctx context.Context, id uuid.UUID) (GetSlipQueueItemRow, error) {
+	row := q.db.QueryRow(ctx, getSlipQueueItem, id)
+	var i GetSlipQueueItemRow
+	err := row.Scan(
+		&i.PaymentSlip.ID,
+		&i.PaymentSlip.InvoiceID,
+		&i.PaymentSlip.FileKey,
+		&i.PaymentSlip.FileSha256,
+		&i.PaymentSlip.ContentType,
+		&i.PaymentSlip.SizeBytes,
+		&i.PaymentSlip.Status,
+		&i.PaymentSlip.RejectReason,
+		&i.PaymentSlip.RejectNote,
+		&i.PaymentSlip.SubmittedAt,
+		&i.PaymentSlip.ReviewedAt,
+		&i.PossibleDuplicate,
+		&i.InvoiceNumber,
+		&i.RoomNumber,
+		&i.BillingPeriod,
+		&i.Total,
+		&i.InvoiceStatus,
+		&i.HasPendingSlip,
+	)
+	return i, err
+}
+
 const insertInvoice = `-- name: InsertInvoice :exec
 INSERT INTO invoices (
     id, invoice_number, room_id, room_number, billing_period, status,
@@ -239,6 +309,36 @@ func (q *Queries) InsertInvoiceLine(ctx context.Context, arg InsertInvoiceLinePa
 	return err
 }
 
+const insertSlip = `-- name: InsertSlip :exec
+INSERT INTO payment_slips (id, invoice_id, file_key, file_sha256, content_type, size_bytes, status, submitted_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type InsertSlipParams struct {
+	ID          uuid.UUID
+	InvoiceID   uuid.UUID
+	FileKey     string
+	FileSha256  string
+	ContentType string
+	SizeBytes   int64
+	Status      string
+	SubmittedAt time.Time
+}
+
+func (q *Queries) InsertSlip(ctx context.Context, arg InsertSlipParams) error {
+	_, err := q.db.Exec(ctx, insertSlip,
+		arg.ID,
+		arg.InvoiceID,
+		arg.FileKey,
+		arg.FileSha256,
+		arg.ContentType,
+		arg.SizeBytes,
+		arg.Status,
+		arg.SubmittedAt,
+	)
+	return err
+}
+
 const insertUtilityRate = `-- name: InsertUtilityRate :exec
 INSERT INTO utility_rates (id, utility_type, per_unit, effective_from, created_at) VALUES ($1, $2, $3, $4, $5)
 `
@@ -293,6 +393,52 @@ func (q *Queries) ListInvoiceLines(ctx context.Context, invoiceID uuid.UUID) ([]
 	return items, nil
 }
 
+const listInvoiceSummariesByRoom = `-- name: ListInvoiceSummariesByRoom :many
+SELECT i.id, i.invoice_number, i.room_number, i.billing_period, i.total, i.status,
+       EXISTS (SELECT 1 FROM payment_slips s WHERE s.invoice_id = i.id AND s.status = 'PENDING')::bool AS has_pending_slip
+FROM invoices i
+WHERE i.room_id = $1 AND i.status <> 'DRAFT'
+ORDER BY i.billing_period DESC
+`
+
+type ListInvoiceSummariesByRoomRow struct {
+	ID             uuid.UUID
+	InvoiceNumber  string
+	RoomNumber     string
+	BillingPeriod  string
+	Total          decimal.Decimal
+	Status         string
+	HasPendingSlip bool
+}
+
+func (q *Queries) ListInvoiceSummariesByRoom(ctx context.Context, roomID uuid.UUID) ([]ListInvoiceSummariesByRoomRow, error) {
+	rows, err := q.db.Query(ctx, listInvoiceSummariesByRoom, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListInvoiceSummariesByRoomRow
+	for rows.Next() {
+		var i ListInvoiceSummariesByRoomRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.InvoiceNumber,
+			&i.RoomNumber,
+			&i.BillingPeriod,
+			&i.Total,
+			&i.Status,
+			&i.HasPendingSlip,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listIssuedReadingsBefore = `-- name: ListIssuedReadingsBefore :many
 SELECT electric_previous, electric_current, electric_meter_digits,
        water_previous, water_current, water_meter_digits
@@ -335,6 +481,113 @@ func (q *Queries) ListIssuedReadingsBefore(ctx context.Context, arg ListIssuedRe
 			&i.WaterPrevious,
 			&i.WaterCurrent,
 			&i.WaterMeterDigits,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSlipQueue = `-- name: ListSlipQueue :many
+SELECT s.id, s.invoice_id, s.file_key, s.file_sha256, s.content_type, s.size_bytes, s.status, s.reject_reason, s.reject_note, s.submitted_at, s.reviewed_at,
+       EXISTS (SELECT 1 FROM payment_slips o WHERE o.file_sha256 = s.file_sha256 AND o.id <> s.id)::bool AS possible_duplicate,
+       i.invoice_number, i.room_number, i.billing_period, i.total, i.status AS invoice_status,
+       EXISTS (SELECT 1 FROM payment_slips p WHERE p.invoice_id = i.id AND p.status = 'PENDING')::bool AS has_pending_slip
+FROM payment_slips s
+JOIN invoices i ON i.id = s.invoice_id
+WHERE $1::text IS NULL OR s.status = $1::text
+ORDER BY s.submitted_at
+`
+
+type ListSlipQueueRow struct {
+	PaymentSlip       PaymentSlip
+	PossibleDuplicate bool
+	InvoiceNumber     string
+	RoomNumber        string
+	BillingPeriod     string
+	Total             decimal.Decimal
+	InvoiceStatus     string
+	HasPendingSlip    bool
+}
+
+func (q *Queries) ListSlipQueue(ctx context.Context, status pgtype.Text) ([]ListSlipQueueRow, error) {
+	rows, err := q.db.Query(ctx, listSlipQueue, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSlipQueueRow
+	for rows.Next() {
+		var i ListSlipQueueRow
+		if err := rows.Scan(
+			&i.PaymentSlip.ID,
+			&i.PaymentSlip.InvoiceID,
+			&i.PaymentSlip.FileKey,
+			&i.PaymentSlip.FileSha256,
+			&i.PaymentSlip.ContentType,
+			&i.PaymentSlip.SizeBytes,
+			&i.PaymentSlip.Status,
+			&i.PaymentSlip.RejectReason,
+			&i.PaymentSlip.RejectNote,
+			&i.PaymentSlip.SubmittedAt,
+			&i.PaymentSlip.ReviewedAt,
+			&i.PossibleDuplicate,
+			&i.InvoiceNumber,
+			&i.RoomNumber,
+			&i.BillingPeriod,
+			&i.Total,
+			&i.InvoiceStatus,
+			&i.HasPendingSlip,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSlipsByInvoice = `-- name: ListSlipsByInvoice :many
+SELECT s.id, s.invoice_id, s.file_key, s.file_sha256, s.content_type, s.size_bytes, s.status, s.reject_reason, s.reject_note, s.submitted_at, s.reviewed_at,
+       EXISTS (SELECT 1 FROM payment_slips o WHERE o.file_sha256 = s.file_sha256 AND o.id <> s.id)::bool AS possible_duplicate
+FROM payment_slips s
+WHERE s.invoice_id = $1
+ORDER BY s.submitted_at
+`
+
+type ListSlipsByInvoiceRow struct {
+	PaymentSlip       PaymentSlip
+	PossibleDuplicate bool
+}
+
+func (q *Queries) ListSlipsByInvoice(ctx context.Context, invoiceID uuid.UUID) ([]ListSlipsByInvoiceRow, error) {
+	rows, err := q.db.Query(ctx, listSlipsByInvoice, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSlipsByInvoiceRow
+	for rows.Next() {
+		var i ListSlipsByInvoiceRow
+		if err := rows.Scan(
+			&i.PaymentSlip.ID,
+			&i.PaymentSlip.InvoiceID,
+			&i.PaymentSlip.FileKey,
+			&i.PaymentSlip.FileSha256,
+			&i.PaymentSlip.ContentType,
+			&i.PaymentSlip.SizeBytes,
+			&i.PaymentSlip.Status,
+			&i.PaymentSlip.RejectReason,
+			&i.PaymentSlip.RejectNote,
+			&i.PaymentSlip.SubmittedAt,
+			&i.PaymentSlip.ReviewedAt,
+			&i.PossibleDuplicate,
 		); err != nil {
 			return nil, err
 		}
@@ -412,6 +665,29 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) er
 		arg.Total,
 		arg.IssuedAt,
 		arg.PaidAt,
+	)
+	return err
+}
+
+const updateSlipReview = `-- name: UpdateSlipReview :exec
+UPDATE payment_slips SET status = $2, reject_reason = $3, reject_note = $4, reviewed_at = $5 WHERE id = $1
+`
+
+type UpdateSlipReviewParams struct {
+	ID           uuid.UUID
+	Status       string
+	RejectReason pgtype.Text
+	RejectNote   pgtype.Text
+	ReviewedAt   *time.Time
+}
+
+func (q *Queries) UpdateSlipReview(ctx context.Context, arg UpdateSlipReviewParams) error {
+	_, err := q.db.Exec(ctx, updateSlipReview,
+		arg.ID,
+		arg.Status,
+		arg.RejectReason,
+		arg.RejectNote,
+		arg.ReviewedAt,
 	)
 	return err
 }
