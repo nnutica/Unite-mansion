@@ -28,3 +28,6 @@ Thumbs.db
 
 # Agent reports & changelog (local only)
 /.claude/context/
+
+# Design export (local reference only)
+/unite-ui/

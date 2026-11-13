@@ -67,7 +67,7 @@ func run() error {
 	if cfg.AppEnv != "local" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	router, err := newRouter(deps{
+	app, err := newApplication(deps{
 		pool:         pool,
 		files:        files,
 		log:          log,
@@ -75,12 +75,14 @@ func run() error {
 		now:          time.Now,
 	})
 	if err != nil {
-		return fmt.Errorf("build router: %w", err)
+		return fmt.Errorf("build application: %w", err)
 	}
+	// §6.6 PDPA retention: daily, in this process (no external scheduler).
+	go app.documents.RunRetention(ctx, 24*time.Hour, log)
 
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,
-		Handler:           router,
+		Handler:           app.handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

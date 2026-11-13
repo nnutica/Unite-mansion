@@ -45,3 +45,8 @@ INSERT INTO recurring_charges (id, room_id, name, amount, active) VALUES ($1, $2
 
 -- name: UpdateRecurringCharge :exec
 UPDATE recurring_charges SET name = $2, amount = $3, active = $4, updated_at = now() WHERE id = $1;
+
+-- name: ListLeasesEndingBetween :many
+SELECT l.*, r.room_number FROM leases l JOIN rooms r ON r.id = l.room_id
+WHERE l.end_date BETWEEN sqlc.arg(from_day)::date AND sqlc.arg(to_day)::date
+ORDER BY l.end_date, r.floor, r.room_number::int;

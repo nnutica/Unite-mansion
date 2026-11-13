@@ -62,6 +62,27 @@ func (e AddLineRequestType) Valid() bool {
 	}
 }
 
+// Defines values for AuditLogEntryActorType.
+const (
+	AuditLogEntryActorTypeADMIN  AuditLogEntryActorType = "ADMIN"
+	AuditLogEntryActorTypeSYSTEM AuditLogEntryActorType = "SYSTEM"
+	AuditLogEntryActorTypeTENANT AuditLogEntryActorType = "TENANT"
+)
+
+// Valid indicates whether the value is a known member of the AuditLogEntryActorType enum.
+func (e AuditLogEntryActorType) Valid() bool {
+	switch e {
+	case AuditLogEntryActorTypeADMIN:
+		return true
+	case AuditLogEntryActorTypeSYSTEM:
+		return true
+	case AuditLogEntryActorTypeTENANT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BillDisplayStatus.
 const (
 	BillDisplayStatusDRAFT               BillDisplayStatus = "DRAFT"
@@ -86,6 +107,45 @@ func (e BillDisplayStatus) Valid() bool {
 	case BillDisplayStatusPENDINGVERIFICATION:
 		return true
 	case BillDisplayStatusUNBILLED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentType.
+const (
+	DocumentTypeIDCARDCOPY    DocumentType = "ID_CARD_COPY"
+	DocumentTypeLEASECONTRACT DocumentType = "LEASE_CONTRACT"
+)
+
+// Valid indicates whether the value is a known member of the DocumentType enum.
+func (e DocumentType) Valid() bool {
+	switch e {
+	case DocumentTypeIDCARDCOPY:
+		return true
+	case DocumentTypeLEASECONTRACT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentUploadRequestContentType.
+const (
+	DocumentUploadRequestContentTypeApplicationpdf DocumentUploadRequestContentType = "application/pdf"
+	DocumentUploadRequestContentTypeImagejpeg      DocumentUploadRequestContentType = "image/jpeg"
+	DocumentUploadRequestContentTypeImagepng       DocumentUploadRequestContentType = "image/png"
+)
+
+// Valid indicates whether the value is a known member of the DocumentUploadRequestContentType enum.
+func (e DocumentUploadRequestContentType) Valid() bool {
+	switch e {
+	case DocumentUploadRequestContentTypeApplicationpdf:
+		return true
+	case DocumentUploadRequestContentTypeImagejpeg:
+		return true
+	case DocumentUploadRequestContentTypeImagepng:
 		return true
 	default:
 		return false
@@ -305,6 +365,11 @@ type AbnormalUsage struct {
 	Water       UsageCheck `json:"water"`
 }
 
+// AcceptConsentRequest defines model for AcceptConsentRequest.
+type AcceptConsentRequest struct {
+	Version int `json:"version"`
+}
+
 // AccountStatus defines model for AccountStatus.
 type AccountStatus string
 
@@ -319,9 +384,39 @@ type AddLineRequest struct {
 // AddLineRequestType defines model for AddLineRequest.Type.
 type AddLineRequestType string
 
+// Announcement defines model for Announcement.
+type Announcement struct {
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+	Message   string             `json:"message"`
+	Title     string             `json:"title"`
+}
+
 // AssignRoomRequest defines model for AssignRoomRequest.
 type AssignRoomRequest struct {
 	RoomNumber string `json:"roomNumber"`
+}
+
+// AuditLogEntry defines model for AuditLogEntry.
+type AuditLogEntry struct {
+	ActorId     *string                `json:"actorId,omitempty"`
+	ActorType   AuditLogEntryActorType `json:"actorType"`
+	AggregateId string                 `json:"aggregateId"`
+	EventName   string                 `json:"eventName"`
+	Id          openapi_types.UUID     `json:"id"`
+	OccurredAt  time.Time              `json:"occurredAt"`
+	Payload     map[string]interface{} `json:"payload"`
+}
+
+// AuditLogEntryActorType defines model for AuditLogEntry.ActorType.
+type AuditLogEntryActorType string
+
+// AuditLogPage defines model for AuditLogPage.
+type AuditLogPage struct {
+	Items []AuditLogEntry `json:"items"`
+
+	// NextCursor Opaque; pass as cursor to get the next page. Absent on the last page.
+	NextCursor *string `json:"nextCursor,omitempty"`
 }
 
 // BillDisplayStatus Computed by the backend from the stored status, slips and due date
@@ -329,6 +424,39 @@ type BillDisplayStatus string
 
 // BillingPeriod Example: 2026-11
 type BillingPeriod = string
+
+// BillingRoomStatus defines model for BillingRoomStatus.
+type BillingRoomStatus struct {
+	Floor int `json:"floor"`
+
+	// HasLease A lease overlaps the month of the period; rooms without one cannot be billed
+	HasLease      bool                `json:"hasLease"`
+	InvoiceId     *openapi_types.UUID `json:"invoiceId,omitempty"`
+	InvoiceNumber *string             `json:"invoiceNumber,omitempty"`
+	RoomNumber    string              `json:"roomNumber"`
+
+	// Status Computed by the backend from the stored status, slips and due date
+	Status BillDisplayStatus `json:"status"`
+
+	// Total Example: 4512.00
+	Total *Money `json:"total,omitempty"`
+}
+
+// ConsentStatus defines model for ConsentStatus.
+type ConsentStatus struct {
+	// Accepted The tenant accepted this (latest) version
+	Accepted   bool       `json:"accepted"`
+	AcceptedAt *time.Time `json:"acceptedAt,omitempty"`
+	Text       string     `json:"text"`
+	Version    int        `json:"version"`
+}
+
+// ConsentText defines model for ConsentText.
+type ConsentText struct {
+	CreatedAt time.Time `json:"createdAt"`
+	Text      string    `json:"text"`
+	Version   int       `json:"version"`
+}
 
 // CreateMaintenanceRequest defines model for CreateMaintenanceRequest.
 type CreateMaintenanceRequest struct {
@@ -350,11 +478,51 @@ type CreateRecurringChargeRequest struct {
 
 // CreateUtilityRateRequest defines model for CreateUtilityRateRequest.
 type CreateUtilityRateRequest struct {
-	EffectiveFrom openapi_types.Date `json:"effectiveFrom"`
+	// AnnouncementMessage Text of the announcement created for tenants (M-09); a standard text is used when empty
+	AnnouncementMessage *string            `json:"announcementMessage,omitempty"`
+	EffectiveFrom       openapi_types.Date `json:"effectiveFrom"`
 
 	// PerUnit Example: 4512.00
 	PerUnit     Money       `json:"perUnit"`
 	UtilityType UtilityType `json:"utilityType"`
+}
+
+// Dashboard defines model for Dashboard.
+type Dashboard struct {
+	// BillingPeriod Example: 2026-11
+	BillingPeriod          BillingPeriod `json:"billingPeriod"`
+	ExpiringLeases         int           `json:"expiringLeases"`
+	NewMaintenanceRequests int           `json:"newMaintenanceRequests"`
+	PendingAccounts        int           `json:"pendingAccounts"`
+	PendingSlips           int           `json:"pendingSlips"`
+
+	// UnbilledRooms Rooms with a lease in the period and no invoice yet
+	UnbilledRooms int `json:"unbilledRooms"`
+
+	// UnpaidRooms Invoices of the period that are ISSUED, OVERDUE or PENDING_VERIFICATION
+	UnpaidRooms int `json:"unpaidRooms"`
+}
+
+// DocumentType defines model for DocumentType.
+type DocumentType string
+
+// DocumentUploadRequest defines model for DocumentUploadRequest.
+type DocumentUploadRequest struct {
+	ContentType DocumentUploadRequestContentType `json:"contentType"`
+
+	// SizeBytes Exact file size (max 10 MB)
+	SizeBytes int64        `json:"sizeBytes"`
+	Type      DocumentType `json:"type"`
+}
+
+// DocumentUploadRequestContentType defines model for DocumentUploadRequest.ContentType.
+type DocumentUploadRequestContentType string
+
+// ExpiringLease defines model for ExpiringLease.
+type ExpiringLease struct {
+	DaysLeft   int    `json:"daysLeft"`
+	Lease      Lease  `json:"lease"`
+	RoomNumber string `json:"roomNumber"`
 }
 
 // Health defines model for Health.
@@ -431,6 +599,13 @@ type Lease struct {
 	TenantName string             `json:"tenantName"`
 }
 
+// LeaseAlert defines model for LeaseAlert.
+type LeaseAlert struct {
+	DaysLeft *int                `json:"daysLeft,omitempty"`
+	EndDate  *openapi_types.Date `json:"endDate,omitempty"`
+	Expiring bool                `json:"expiring"`
+}
+
 // LeaseRequest defines model for LeaseRequest.
 type LeaseRequest struct {
 	EndDate    openapi_types.Date `json:"endDate"`
@@ -501,6 +676,12 @@ type MeterInput struct {
 
 // Money Example: 4512.00
 type Money = string
+
+// PaymentQr defines model for PaymentQr.
+type PaymentQr struct {
+	// ImageUrl Short-lived signed URL (5 minutes)
+	ImageUrl string `json:"imageUrl"`
+}
 
 // PaymentSlip defines model for PaymentSlip.
 type PaymentSlip struct {
@@ -620,6 +801,14 @@ type SetMetersRequest struct {
 	Water       *MeterInput `json:"water,omitempty"`
 }
 
+// Settings defines model for Settings.
+type Settings struct {
+	LeaseExpiryAlertDays int `json:"leaseExpiryAlertDays"`
+
+	// PaymentQrUrl Short-lived signed URL of the payment QR; absent until uploaded
+	PaymentQrUrl *string `json:"paymentQrUrl,omitempty"`
+}
+
 // SlipQueueItem defines model for SlipQueueItem.
 type SlipQueueItem struct {
 	Invoice    InvoiceSummary `json:"invoice"`
@@ -632,6 +821,17 @@ type SlipRejectReason string
 
 // SlipStatus defines model for SlipStatus.
 type SlipStatus string
+
+// SubmitDocumentRequest defines model for SubmitDocumentRequest.
+type SubmitDocumentRequest struct {
+	FileKey string       `json:"fileKey"`
+	Type    DocumentType `json:"type"`
+}
+
+// SubmitFileRequest defines model for SubmitFileRequest.
+type SubmitFileRequest struct {
+	FileKey string `json:"fileKey"`
+}
 
 // SubmitSlipRequest defines model for SubmitSlipRequest.
 type SubmitSlipRequest struct {
@@ -650,11 +850,33 @@ type TenantAccount struct {
 	Username     string             `json:"username"`
 }
 
+// TenantDocument defines model for TenantDocument.
+type TenantDocument struct {
+	ContentType string             `json:"contentType"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// PurgeAt Set after the account is unbound; the file is deleted at this time (PDPA, 30 days)
+	PurgeAt    *time.Time   `json:"purgeAt,omitempty"`
+	Type       DocumentType `json:"type"`
+	UploadedAt time.Time    `json:"uploadedAt"`
+
+	// Url Short-lived signed URL (5 minutes)
+	Url string `json:"url"`
+
+	// Username Account that uploaded it
+	Username string `json:"username"`
+}
+
 // TenantRoom defines model for TenantRoom.
 type TenantRoom struct {
 	ActiveLease *Lease `json:"activeLease,omitempty"`
 	Floor       int    `json:"floor"`
 	RoomNumber  string `json:"roomNumber"`
+}
+
+// UpdateConsentTextRequest defines model for UpdateConsentTextRequest.
+type UpdateConsentTextRequest struct {
+	Text string `json:"text"`
 }
 
 // UpdateMaintenanceStatusRequest defines model for UpdateMaintenanceStatusRequest.
@@ -677,6 +899,11 @@ type UpdateRoomRequest struct {
 	BasePrice           *Money `json:"basePrice,omitempty"`
 	ElectricMeterDigits *int   `json:"electricMeterDigits,omitempty"`
 	WaterMeterDigits    *int   `json:"waterMeterDigits,omitempty"`
+}
+
+// UpdateSettingsRequest defines model for UpdateSettingsRequest.
+type UpdateSettingsRequest struct {
+	LeaseExpiryAlertDays *int `json:"leaseExpiryAlertDays,omitempty"`
 }
 
 // UploadRequest defines model for UploadRequest.
@@ -762,6 +989,15 @@ type SlipId = openapi_types.UUID
 // LoggedIn defines model for LoggedIn.
 type LoggedIn = Me
 
+// ListAuditLogsParams defines parameters for ListAuditLogs.
+type ListAuditLogsParams struct {
+	AggregateId *string `form:"aggregateId,omitempty" json:"aggregateId,omitempty"`
+
+	// Cursor nextCursor of the previous page (opaque)
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListMaintenanceRequestsParams defines parameters for ListMaintenanceRequests.
 type ListMaintenanceRequestsParams struct {
 	Status *MaintenanceStatus `form:"status,omitempty" json:"status,omitempty"`
@@ -769,7 +1005,9 @@ type ListMaintenanceRequestsParams struct {
 
 // ListRoomsParams defines parameters for ListRooms.
 type ListRoomsParams struct {
-	Floor *int `form:"floor,omitempty" json:"floor,omitempty"`
+	// LeaseExpiring Only rooms whose lease ends within the alert window
+	LeaseExpiring *bool `form:"leaseExpiring,omitempty" json:"leaseExpiring,omitempty"`
+	Floor         *int  `form:"floor,omitempty" json:"floor,omitempty"`
 }
 
 // ListSlipsParams defines parameters for ListSlips.
@@ -781,6 +1019,9 @@ type ListSlipsParams struct {
 type ListTenantAccountsParams struct {
 	Status *AccountStatus `form:"status,omitempty" json:"status,omitempty"`
 }
+
+// UpdateConsentTextJSONRequestBody defines body for UpdateConsentText for application/json ContentType.
+type UpdateConsentTextJSONRequestBody = UpdateConsentTextRequest
 
 // AddInvoiceLineJSONRequestBody defines body for AddInvoiceLine for application/json ContentType.
 type AddInvoiceLineJSONRequestBody = AddLineRequest
@@ -806,6 +1047,15 @@ type CreateLeaseJSONRequestBody = LeaseRequest
 // CreateRecurringChargeJSONRequestBody defines body for CreateRecurringCharge for application/json ContentType.
 type CreateRecurringChargeJSONRequestBody = CreateRecurringChargeRequest
 
+// UpdateSettingsJSONRequestBody defines body for UpdateSettings for application/json ContentType.
+type UpdateSettingsJSONRequestBody = UpdateSettingsRequest
+
+// SetPaymentQrJSONRequestBody defines body for SetPaymentQr for application/json ContentType.
+type SetPaymentQrJSONRequestBody = SubmitFileRequest
+
+// CreatePaymentQrUploadUrlJSONRequestBody defines body for CreatePaymentQrUploadUrl for application/json ContentType.
+type CreatePaymentQrUploadUrlJSONRequestBody = UploadRequest
+
 // RejectSlipJSONRequestBody defines body for RejectSlip for application/json ContentType.
 type RejectSlipJSONRequestBody = RejectSlipRequest
 
@@ -827,6 +1077,15 @@ type TenantLoginJSONRequestBody = LoginRequest
 // RegisterTenantJSONRequestBody defines body for RegisterTenant for application/json ContentType.
 type RegisterTenantJSONRequestBody = RegisterTenantRequest
 
+// AcceptConsentJSONRequestBody defines body for AcceptConsent for application/json ContentType.
+type AcceptConsentJSONRequestBody = AcceptConsentRequest
+
+// SubmitDocumentJSONRequestBody defines body for SubmitDocument for application/json ContentType.
+type SubmitDocumentJSONRequestBody = SubmitDocumentRequest
+
+// CreateDocumentUploadUrlJSONRequestBody defines body for CreateDocumentUploadUrl for application/json ContentType.
+type CreateDocumentUploadUrlJSONRequestBody = DocumentUploadRequest
+
 // SubmitSlipJSONRequestBody defines body for SubmitSlip for application/json ContentType.
 type SubmitSlipJSONRequestBody = SubmitSlipRequest
 
@@ -841,12 +1100,30 @@ type CreateMaintenanceUploadUrlJSONRequestBody = UploadRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListAnnouncements Announcements, newest first (created automatically when rates change)
+	// (GET /admin/announcements)
+	ListAnnouncements(c *gin.Context)
+	// ListAuditLogs Audit log, newest first; pass nextCursor from the previous page as cursor to continue
+	// (GET /admin/audit-logs)
+	ListAuditLogs(c *gin.Context, params ListAuditLogsParams)
+	// ListBillingPeriodRooms Billing status of every room for a period (P-A03), one call, not paginated
+	// (GET /admin/billing-periods/{period}/rooms)
+	ListBillingPeriodRooms(c *gin.Context, period Period)
 	// GetRoomInvoice The invoice of a room for a billing period (P-A04); 404 if not created yet
 	// (GET /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
 	GetRoomInvoice(c *gin.Context, period Period, roomNumber RoomNumber)
 	// CreateInvoiceDraft Create a draft, snapshotting rent, rates and recurring charges (INV-4)
 	// (POST /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
 	CreateInvoiceDraft(c *gin.Context, period Period, roomNumber RoomNumber)
+
+	// (GET /admin/consent-text)
+	GetConsentText(c *gin.Context)
+	// UpdateConsentText Publish a new consent text; tenants must accept the new version before uploading
+	// (PUT /admin/consent-text)
+	UpdateConsentText(c *gin.Context)
+	// GetDashboard Counts for the 6 to-do cards (P-A02), for the current billing period
+	// (GET /admin/dashboard)
+	GetDashboard(c *gin.Context)
 
 	// (GET /admin/invoices/{invoiceId})
 	GetInvoice(c *gin.Context, invoiceId InvoiceId)
@@ -862,6 +1139,9 @@ type ServerInterface interface {
 	// SetInvoiceMeters Enter meter readings (DRAFT only). Lower than previous requires rolloverConfirmed (M-02).
 	// (PATCH /admin/invoices/{invoiceId}/meters)
 	SetInvoiceMeters(c *gin.Context, invoiceId InvoiceId)
+	// ListExpiringLeases Leases ending within the alert window (settings, default 30 days), soonest first
+	// (GET /admin/leases/expiring)
+	ListExpiringLeases(c *gin.Context)
 	// UpdateLease Edit a lease (M-07)
 	// (PATCH /admin/leases/{leaseId})
 	UpdateLease(c *gin.Context, leaseId LeaseId)
@@ -886,12 +1166,27 @@ type ServerInterface interface {
 	// UpdateRoom Change rent or meter digits. Affects only drafts created afterwards (INV-4).
 	// (PATCH /admin/rooms/{roomNumber})
 	UpdateRoom(c *gin.Context, roomNumber RoomNumber)
+	// ListRoomDocuments Documents uploaded for a room (P-A06), with the scheduled deletion time after move-out
+	// (GET /admin/rooms/{roomNumber}/documents)
+	ListRoomDocuments(c *gin.Context, roomNumber RoomNumber)
 	// CreateLease Add a lease (M-07). Leases of a room may not overlap.
 	// (POST /admin/rooms/{roomNumber}/leases)
 	CreateLease(c *gin.Context, roomNumber RoomNumber)
 	// CreateRecurringCharge Add a monthly service charge (M-08)
 	// (POST /admin/rooms/{roomNumber}/recurring-charges)
 	CreateRecurringCharge(c *gin.Context, roomNumber RoomNumber)
+	// GetSettings Owner settings (P-A13)
+	// (GET /admin/settings)
+	GetSettings(c *gin.Context)
+
+	// (PATCH /admin/settings)
+	UpdateSettings(c *gin.Context)
+	// SetPaymentQr Use an uploaded image as the payment QR shown to tenants (P-T06)
+	// (PUT /admin/settings/payment-qr)
+	SetPaymentQr(c *gin.Context)
+	// CreatePaymentQrUploadUrl Get a presigned URL to upload the owner payment QR image
+	// (POST /admin/settings/payment-qr/upload-url)
+	CreatePaymentQrUploadUrl(c *gin.Context)
 	// ListSlips Slip verification queue (P-A07), oldest first
 	// (GET /admin/slips)
 	ListSlips(c *gin.Context, params ListSlipsParams)
@@ -937,6 +1232,24 @@ type ServerInterface interface {
 	// GetHealth Liveness and database check
 	// (GET /health)
 	GetHealth(c *gin.Context)
+	// ListTenantAnnouncements Announcements for tenants (P-T11), newest first
+	// (GET /tenant/announcements)
+	ListTenantAnnouncements(c *gin.Context)
+	// GetTenantConsent Current consent text and whether the tenant accepted it (M-10)
+	// (GET /tenant/consent)
+	GetTenantConsent(c *gin.Context)
+	// AcceptConsent Accept the given consent version (must be the latest)
+	// (POST /tenant/consent)
+	AcceptConsent(c *gin.Context)
+	// ListTenantDocuments The tenant own documents (P-T12)
+	// (GET /tenant/documents)
+	ListTenantDocuments(c *gin.Context)
+	// SubmitDocument Record an uploaded document
+	// (POST /tenant/documents)
+	SubmitDocument(c *gin.Context)
+	// CreateDocumentUploadUrl Get a presigned URL to upload an ID card copy or lease contract (after consent)
+	// (POST /tenant/documents/upload-url)
+	CreateDocumentUploadUrl(c *gin.Context)
 	// ListTenantInvoices Invoices of the tenant's room (issued and paid; drafts are hidden), newest first
 	// (GET /tenant/invoices)
 	ListTenantInvoices(c *gin.Context)
@@ -949,6 +1262,9 @@ type ServerInterface interface {
 	// CreateSlipUploadUrl Step 1 — get a presigned URL to upload a slip image directly to storage
 	// (POST /tenant/invoices/{invoiceId}/slips/upload-url)
 	CreateSlipUploadUrl(c *gin.Context, invoiceId InvoiceId)
+	// GetTenantLeaseAlert Whether the tenant lease ends within the alert window (P-T04 banner)
+	// (GET /tenant/lease-alert)
+	GetTenantLeaseAlert(c *gin.Context)
 	// ListTenantMaintenanceRequests Repair requests of the tenant's room, newest first
 	// (GET /tenant/maintenance-requests)
 	ListTenantMaintenanceRequests(c *gin.Context)
@@ -961,6 +1277,9 @@ type ServerInterface interface {
 	// GetTenantMaintenanceRequest One repair request of the tenant's room; 404 for another room's
 	// (GET /tenant/maintenance-requests/{requestId})
 	GetTenantMaintenanceRequest(c *gin.Context, requestId RequestId)
+	// GetPaymentQr The owner payment QR image for tenants to scan (P-T06); 404 until uploaded
+	// (GET /tenant/payment-qr)
+	GetPaymentQr(c *gin.Context)
 	// GetTenantRoom The room the logged-in tenant is bound to
 	// (GET /tenant/room)
 	GetTenantRoom(c *gin.Context)
@@ -974,6 +1293,87 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// ListAnnouncements operation middleware
+func (siw *ServerInterfaceWrapper) ListAnnouncements(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAnnouncements(c)
+}
+
+// ListAuditLogs operation middleware
+func (siw *ServerInterfaceWrapper) ListAuditLogs(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAuditLogsParams
+
+	// ------------- Optional query parameter "aggregateId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "aggregateId", c.Request.URL.Query(), &params.AggregateId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter aggregateId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", c.Request.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter cursor: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAuditLogs(c, params)
+}
+
+// ListBillingPeriodRooms operation middleware
+func (siw *ServerInterfaceWrapper) ListBillingPeriodRooms(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "period" -------------
+	var period Period
+
+	err = runtime.BindStyledParameterWithOptions("simple", "period", c.Param("period"), &period, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter period: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListBillingPeriodRooms(c, period)
+}
 
 // GetRoomInvoice operation middleware
 func (siw *ServerInterfaceWrapper) GetRoomInvoice(c *gin.Context) {
@@ -1041,6 +1441,45 @@ func (siw *ServerInterfaceWrapper) CreateInvoiceDraft(c *gin.Context) {
 	}
 
 	siw.Handler.CreateInvoiceDraft(c, period, roomNumber)
+}
+
+// GetConsentText operation middleware
+func (siw *ServerInterfaceWrapper) GetConsentText(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetConsentText(c)
+}
+
+// UpdateConsentText operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConsentText(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateConsentText(c)
+}
+
+// GetDashboard operation middleware
+func (siw *ServerInterfaceWrapper) GetDashboard(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetDashboard(c)
 }
 
 // GetInvoice operation middleware
@@ -1175,6 +1614,19 @@ func (siw *ServerInterfaceWrapper) SetInvoiceMeters(c *gin.Context) {
 	}
 
 	siw.Handler.SetInvoiceMeters(c, invoiceId)
+}
+
+// ListExpiringLeases operation middleware
+func (siw *ServerInterfaceWrapper) ListExpiringLeases(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListExpiringLeases(c)
 }
 
 // UpdateLease operation middleware
@@ -1313,6 +1765,14 @@ func (siw *ServerInterfaceWrapper) ListRooms(c *gin.Context) {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListRoomsParams
 
+	// ------------- Optional query parameter "leaseExpiring" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "leaseExpiring", c.Request.URL.Query(), &params.LeaseExpiring, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter leaseExpiring: %w", err), http.StatusBadRequest)
+		return
+	}
+
 	// ------------- Optional query parameter "floor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "floor", c.Request.URL.Query(), &params.Floor, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -1381,6 +1841,31 @@ func (siw *ServerInterfaceWrapper) UpdateRoom(c *gin.Context) {
 	siw.Handler.UpdateRoom(c, roomNumber)
 }
 
+// ListRoomDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListRoomDocuments(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "roomNumber" -------------
+	var roomNumber RoomNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "roomNumber", c.Param("roomNumber"), &roomNumber, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter roomNumber: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListRoomDocuments(c, roomNumber)
+}
+
 // CreateLease operation middleware
 func (siw *ServerInterfaceWrapper) CreateLease(c *gin.Context) {
 
@@ -1429,6 +1914,58 @@ func (siw *ServerInterfaceWrapper) CreateRecurringCharge(c *gin.Context) {
 	}
 
 	siw.Handler.CreateRecurringCharge(c, roomNumber)
+}
+
+// GetSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetSettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetSettings(c)
+}
+
+// UpdateSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateSettings(c)
+}
+
+// SetPaymentQr operation middleware
+func (siw *ServerInterfaceWrapper) SetPaymentQr(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SetPaymentQr(c)
+}
+
+// CreatePaymentQrUploadUrl operation middleware
+func (siw *ServerInterfaceWrapper) CreatePaymentQrUploadUrl(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreatePaymentQrUploadUrl(c)
 }
 
 // ListSlips operation middleware
@@ -1714,6 +2251,84 @@ func (siw *ServerInterfaceWrapper) GetHealth(c *gin.Context) {
 	siw.Handler.GetHealth(c)
 }
 
+// ListTenantAnnouncements operation middleware
+func (siw *ServerInterfaceWrapper) ListTenantAnnouncements(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTenantAnnouncements(c)
+}
+
+// GetTenantConsent operation middleware
+func (siw *ServerInterfaceWrapper) GetTenantConsent(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTenantConsent(c)
+}
+
+// AcceptConsent operation middleware
+func (siw *ServerInterfaceWrapper) AcceptConsent(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptConsent(c)
+}
+
+// ListTenantDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListTenantDocuments(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTenantDocuments(c)
+}
+
+// SubmitDocument operation middleware
+func (siw *ServerInterfaceWrapper) SubmitDocument(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubmitDocument(c)
+}
+
+// CreateDocumentUploadUrl operation middleware
+func (siw *ServerInterfaceWrapper) CreateDocumentUploadUrl(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateDocumentUploadUrl(c)
+}
+
 // ListTenantInvoices operation middleware
 func (siw *ServerInterfaceWrapper) ListTenantInvoices(c *gin.Context) {
 
@@ -1802,6 +2417,19 @@ func (siw *ServerInterfaceWrapper) CreateSlipUploadUrl(c *gin.Context) {
 	siw.Handler.CreateSlipUploadUrl(c, invoiceId)
 }
 
+// GetTenantLeaseAlert operation middleware
+func (siw *ServerInterfaceWrapper) GetTenantLeaseAlert(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTenantLeaseAlert(c)
+}
+
 // ListTenantMaintenanceRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListTenantMaintenanceRequests(c *gin.Context) {
 
@@ -1864,6 +2492,19 @@ func (siw *ServerInterfaceWrapper) GetTenantMaintenanceRequest(c *gin.Context) {
 	}
 
 	siw.Handler.GetTenantMaintenanceRequest(c, requestId)
+}
+
+// GetPaymentQr operation middleware
+func (siw *ServerInterfaceWrapper) GetPaymentQr(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPaymentQr(c)
 }
 
 // GetTenantRoom operation middleware
@@ -1947,7 +2588,31 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/admin/maintenance-requests", wrapper.ListMaintenanceRequests)
 	router.GET(options.BaseURL+"/admin/maintenance-requests/:requestId", wrapper.GetMaintenanceRequest)
 	router.PATCH(options.BaseURL+"/admin/maintenance-requests/:requestId/status", wrapper.UpdateMaintenanceStatus)
+	router.GET(options.BaseURL+"/admin/billing-periods/:period/rooms", wrapper.ListBillingPeriodRooms)
+	router.GET(options.BaseURL+"/admin/dashboard", wrapper.GetDashboard)
+	router.GET(options.BaseURL+"/admin/announcements", wrapper.ListAnnouncements)
+	router.GET(options.BaseURL+"/tenant/announcements", wrapper.ListTenantAnnouncements)
+	router.GET(options.BaseURL+"/admin/settings", wrapper.GetSettings)
+	router.PATCH(options.BaseURL+"/admin/settings", wrapper.UpdateSettings)
+	router.POST(options.BaseURL+"/admin/settings/payment-qr/upload-url", wrapper.CreatePaymentQrUploadUrl)
+	router.PUT(options.BaseURL+"/admin/settings/payment-qr", wrapper.SetPaymentQr)
+	router.GET(options.BaseURL+"/tenant/payment-qr", wrapper.GetPaymentQr)
+	router.GET(options.BaseURL+"/admin/leases/expiring", wrapper.ListExpiringLeases)
+	router.GET(options.BaseURL+"/tenant/lease-alert", wrapper.GetTenantLeaseAlert)
+	router.GET(options.BaseURL+"/tenant/consent", wrapper.GetTenantConsent)
+	router.POST(options.BaseURL+"/tenant/consent", wrapper.AcceptConsent)
+	router.GET(options.BaseURL+"/admin/consent-text", wrapper.GetConsentText)
+	router.PUT(options.BaseURL+"/admin/consent-text", wrapper.UpdateConsentText)
+	router.POST(options.BaseURL+"/tenant/documents/upload-url", wrapper.CreateDocumentUploadUrl)
+	router.GET(options.BaseURL+"/tenant/documents", wrapper.ListTenantDocuments)
+	router.POST(options.BaseURL+"/tenant/documents", wrapper.SubmitDocument)
+	router.GET(options.BaseURL+"/admin/rooms/:roomNumber/documents", wrapper.ListRoomDocuments)
+	router.GET(options.BaseURL+"/admin/audit-logs", wrapper.ListAuditLogs)
 }
+
+type ConsentStatusJSONResponse ConsentStatus
+
+type ConsentTextJSONResponse ConsentText
 
 type InvoiceJSONResponse Invoice
 
@@ -1964,9 +2629,127 @@ type MaintenanceRequestJSONResponse MaintenanceRequest
 
 type ProblemApplicationProblemPlusJSONResponse Problem
 
+type SettingsJSONResponse Settings
+
 type SlipQueueItemJSONResponse SlipQueueItem
 
 type UploadUrlJSONResponse UploadUrl
+
+type ListAnnouncementsRequestObject struct {
+}
+
+type ListAnnouncementsResponseObject interface {
+	VisitListAnnouncementsResponse(w http.ResponseWriter) error
+}
+
+type ListAnnouncements200JSONResponse []Announcement
+
+func (response ListAnnouncements200JSONResponse) VisitListAnnouncementsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAnnouncementsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListAnnouncementsdefaultApplicationProblemPlusJSONResponse) VisitListAnnouncementsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAuditLogsRequestObject struct {
+	Params ListAuditLogsParams
+}
+
+type ListAuditLogsResponseObject interface {
+	VisitListAuditLogsResponse(w http.ResponseWriter) error
+}
+
+type ListAuditLogs200JSONResponse AuditLogPage
+
+func (response ListAuditLogs200JSONResponse) VisitListAuditLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAuditLogsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListAuditLogsdefaultApplicationProblemPlusJSONResponse) VisitListAuditLogsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillingPeriodRoomsRequestObject struct {
+	Period Period `json:"period"`
+}
+
+type ListBillingPeriodRoomsResponseObject interface {
+	VisitListBillingPeriodRoomsResponse(w http.ResponseWriter) error
+}
+
+type ListBillingPeriodRooms200JSONResponse []BillingRoomStatus
+
+func (response ListBillingPeriodRooms200JSONResponse) VisitListBillingPeriodRoomsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillingPeriodRoomsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListBillingPeriodRoomsdefaultApplicationProblemPlusJSONResponse) VisitListBillingPeriodRoomsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetRoomInvoiceRequestObject struct {
 	Period     Period     `json:"period"`
@@ -2037,6 +2820,121 @@ type CreateInvoiceDraftdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response CreateInvoiceDraftdefaultApplicationProblemPlusJSONResponse) VisitCreateInvoiceDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsentTextRequestObject struct {
+}
+
+type GetConsentTextResponseObject interface {
+	VisitGetConsentTextResponse(w http.ResponseWriter) error
+}
+
+type GetConsentText200JSONResponse struct{ ConsentTextJSONResponse }
+
+func (response GetConsentText200JSONResponse) VisitGetConsentTextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsentTextdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetConsentTextdefaultApplicationProblemPlusJSONResponse) VisitGetConsentTextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConsentTextRequestObject struct {
+	Body *UpdateConsentTextJSONRequestBody
+}
+
+type UpdateConsentTextResponseObject interface {
+	VisitUpdateConsentTextResponse(w http.ResponseWriter) error
+}
+
+type UpdateConsentText200JSONResponse struct{ ConsentTextJSONResponse }
+
+func (response UpdateConsentText200JSONResponse) VisitUpdateConsentTextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConsentTextdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateConsentTextdefaultApplicationProblemPlusJSONResponse) VisitUpdateConsentTextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDashboardRequestObject struct {
+}
+
+type GetDashboardResponseObject interface {
+	VisitGetDashboardResponse(w http.ResponseWriter) error
+}
+
+type GetDashboard200JSONResponse Dashboard
+
+func (response GetDashboard200JSONResponse) VisitGetDashboardResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDashboarddefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetDashboarddefaultApplicationProblemPlusJSONResponse) VisitGetDashboardResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2235,6 +3133,44 @@ type SetInvoiceMetersdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response SetInvoiceMetersdefaultApplicationProblemPlusJSONResponse) VisitSetInvoiceMetersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExpiringLeasesRequestObject struct {
+}
+
+type ListExpiringLeasesResponseObject interface {
+	VisitListExpiringLeasesResponse(w http.ResponseWriter) error
+}
+
+type ListExpiringLeases200JSONResponse []ExpiringLease
+
+func (response ListExpiringLeases200JSONResponse) VisitListExpiringLeasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExpiringLeasesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListExpiringLeasesdefaultApplicationProblemPlusJSONResponse) VisitListExpiringLeasesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2562,6 +3498,45 @@ func (response UpdateRoomdefaultApplicationProblemPlusJSONResponse) VisitUpdateR
 	return err
 }
 
+type ListRoomDocumentsRequestObject struct {
+	RoomNumber RoomNumber `json:"roomNumber"`
+}
+
+type ListRoomDocumentsResponseObject interface {
+	VisitListRoomDocumentsResponse(w http.ResponseWriter) error
+}
+
+type ListRoomDocuments200JSONResponse []TenantDocument
+
+func (response ListRoomDocuments200JSONResponse) VisitListRoomDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRoomDocumentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListRoomDocumentsdefaultApplicationProblemPlusJSONResponse) VisitListRoomDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateLeaseRequestObject struct {
 	RoomNumber RoomNumber `json:"roomNumber"`
 	Body       *CreateLeaseJSONRequestBody
@@ -2631,6 +3606,161 @@ type CreateRecurringChargedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response CreateRecurringChargedefaultApplicationProblemPlusJSONResponse) VisitCreateRecurringChargeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSettingsRequestObject struct {
+}
+
+type GetSettingsResponseObject interface {
+	VisitGetSettingsResponse(w http.ResponseWriter) error
+}
+
+type GetSettings200JSONResponse struct{ SettingsJSONResponse }
+
+func (response GetSettings200JSONResponse) VisitGetSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSettingsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetSettingsdefaultApplicationProblemPlusJSONResponse) VisitGetSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSettingsRequestObject struct {
+	Body *UpdateSettingsJSONRequestBody
+}
+
+type UpdateSettingsResponseObject interface {
+	VisitUpdateSettingsResponse(w http.ResponseWriter) error
+}
+
+type UpdateSettings200JSONResponse struct{ SettingsJSONResponse }
+
+func (response UpdateSettings200JSONResponse) VisitUpdateSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSettingsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response UpdateSettingsdefaultApplicationProblemPlusJSONResponse) VisitUpdateSettingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetPaymentQrRequestObject struct {
+	Body *SetPaymentQrJSONRequestBody
+}
+
+type SetPaymentQrResponseObject interface {
+	VisitSetPaymentQrResponse(w http.ResponseWriter) error
+}
+
+type SetPaymentQr200JSONResponse struct{ SettingsJSONResponse }
+
+func (response SetPaymentQr200JSONResponse) VisitSetPaymentQrResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetPaymentQrdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SetPaymentQrdefaultApplicationProblemPlusJSONResponse) VisitSetPaymentQrResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePaymentQrUploadUrlRequestObject struct {
+	Body *CreatePaymentQrUploadUrlJSONRequestBody
+}
+
+type CreatePaymentQrUploadUrlResponseObject interface {
+	VisitCreatePaymentQrUploadUrlResponse(w http.ResponseWriter) error
+}
+
+type CreatePaymentQrUploadUrl200JSONResponse struct{ UploadUrlJSONResponse }
+
+func (response CreatePaymentQrUploadUrl200JSONResponse) VisitCreatePaymentQrUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreatePaymentQrUploadUrldefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreatePaymentQrUploadUrldefaultApplicationProblemPlusJSONResponse) VisitCreatePaymentQrUploadUrlResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3228,6 +4358,237 @@ func (response GetHealthdefaultApplicationProblemPlusJSONResponse) VisitGetHealt
 	return err
 }
 
+type ListTenantAnnouncementsRequestObject struct {
+}
+
+type ListTenantAnnouncementsResponseObject interface {
+	VisitListTenantAnnouncementsResponse(w http.ResponseWriter) error
+}
+
+type ListTenantAnnouncements200JSONResponse []Announcement
+
+func (response ListTenantAnnouncements200JSONResponse) VisitListTenantAnnouncementsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantAnnouncementsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListTenantAnnouncementsdefaultApplicationProblemPlusJSONResponse) VisitListTenantAnnouncementsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantConsentRequestObject struct {
+}
+
+type GetTenantConsentResponseObject interface {
+	VisitGetTenantConsentResponse(w http.ResponseWriter) error
+}
+
+type GetTenantConsent200JSONResponse struct{ ConsentStatusJSONResponse }
+
+func (response GetTenantConsent200JSONResponse) VisitGetTenantConsentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantConsentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTenantConsentdefaultApplicationProblemPlusJSONResponse) VisitGetTenantConsentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptConsentRequestObject struct {
+	Body *AcceptConsentJSONRequestBody
+}
+
+type AcceptConsentResponseObject interface {
+	VisitAcceptConsentResponse(w http.ResponseWriter) error
+}
+
+type AcceptConsent200JSONResponse struct{ ConsentStatusJSONResponse }
+
+func (response AcceptConsent200JSONResponse) VisitAcceptConsentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptConsentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response AcceptConsentdefaultApplicationProblemPlusJSONResponse) VisitAcceptConsentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantDocumentsRequestObject struct {
+}
+
+type ListTenantDocumentsResponseObject interface {
+	VisitListTenantDocumentsResponse(w http.ResponseWriter) error
+}
+
+type ListTenantDocuments200JSONResponse []TenantDocument
+
+func (response ListTenantDocuments200JSONResponse) VisitListTenantDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTenantDocumentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response ListTenantDocumentsdefaultApplicationProblemPlusJSONResponse) VisitListTenantDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitDocumentRequestObject struct {
+	Body *SubmitDocumentJSONRequestBody
+}
+
+type SubmitDocumentResponseObject interface {
+	VisitSubmitDocumentResponse(w http.ResponseWriter) error
+}
+
+type SubmitDocument201JSONResponse TenantDocument
+
+func (response SubmitDocument201JSONResponse) VisitSubmitDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitDocumentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response SubmitDocumentdefaultApplicationProblemPlusJSONResponse) VisitSubmitDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentUploadUrlRequestObject struct {
+	Body *CreateDocumentUploadUrlJSONRequestBody
+}
+
+type CreateDocumentUploadUrlResponseObject interface {
+	VisitCreateDocumentUploadUrlResponse(w http.ResponseWriter) error
+}
+
+type CreateDocumentUploadUrl200JSONResponse struct{ UploadUrlJSONResponse }
+
+func (response CreateDocumentUploadUrl200JSONResponse) VisitCreateDocumentUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentUploadUrldefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response CreateDocumentUploadUrldefaultApplicationProblemPlusJSONResponse) VisitCreateDocumentUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListTenantInvoicesRequestObject struct {
 }
 
@@ -3374,6 +4735,44 @@ type CreateSlipUploadUrldefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response CreateSlipUploadUrldefaultApplicationProblemPlusJSONResponse) VisitCreateSlipUploadUrlResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantLeaseAlertRequestObject struct {
+}
+
+type GetTenantLeaseAlertResponseObject interface {
+	VisitGetTenantLeaseAlertResponse(w http.ResponseWriter) error
+}
+
+type GetTenantLeaseAlert200JSONResponse LeaseAlert
+
+func (response GetTenantLeaseAlert200JSONResponse) VisitGetTenantLeaseAlertResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTenantLeaseAlertdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetTenantLeaseAlertdefaultApplicationProblemPlusJSONResponse) VisitGetTenantLeaseAlertResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3540,6 +4939,44 @@ func (response GetTenantMaintenanceRequestdefaultApplicationProblemPlusJSONRespo
 	return err
 }
 
+type GetPaymentQrRequestObject struct {
+}
+
+type GetPaymentQrResponseObject interface {
+	VisitGetPaymentQrResponse(w http.ResponseWriter) error
+}
+
+type GetPaymentQr200JSONResponse PaymentQr
+
+func (response GetPaymentQr200JSONResponse) VisitGetPaymentQrResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPaymentQrdefaultApplicationProblemPlusJSONResponse struct {
+	Body       Problem
+	StatusCode int
+}
+
+func (response GetPaymentQrdefaultApplicationProblemPlusJSONResponse) VisitGetPaymentQrResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetTenantRoomRequestObject struct {
 }
 
@@ -3580,12 +5017,30 @@ func (response GetTenantRoomdefaultApplicationProblemPlusJSONResponse) VisitGetT
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListAnnouncements Announcements, newest first (created automatically when rates change)
+	// (GET /admin/announcements)
+	ListAnnouncements(ctx context.Context, request ListAnnouncementsRequestObject) (ListAnnouncementsResponseObject, error)
+	// ListAuditLogs Audit log, newest first; pass nextCursor from the previous page as cursor to continue
+	// (GET /admin/audit-logs)
+	ListAuditLogs(ctx context.Context, request ListAuditLogsRequestObject) (ListAuditLogsResponseObject, error)
+	// ListBillingPeriodRooms Billing status of every room for a period (P-A03), one call, not paginated
+	// (GET /admin/billing-periods/{period}/rooms)
+	ListBillingPeriodRooms(ctx context.Context, request ListBillingPeriodRoomsRequestObject) (ListBillingPeriodRoomsResponseObject, error)
 	// GetRoomInvoice The invoice of a room for a billing period (P-A04); 404 if not created yet
 	// (GET /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
 	GetRoomInvoice(ctx context.Context, request GetRoomInvoiceRequestObject) (GetRoomInvoiceResponseObject, error)
 	// CreateInvoiceDraft Create a draft, snapshotting rent, rates and recurring charges (INV-4)
 	// (POST /admin/billing-periods/{period}/rooms/{roomNumber}/invoice)
 	CreateInvoiceDraft(ctx context.Context, request CreateInvoiceDraftRequestObject) (CreateInvoiceDraftResponseObject, error)
+
+	// (GET /admin/consent-text)
+	GetConsentText(ctx context.Context, request GetConsentTextRequestObject) (GetConsentTextResponseObject, error)
+	// UpdateConsentText Publish a new consent text; tenants must accept the new version before uploading
+	// (PUT /admin/consent-text)
+	UpdateConsentText(ctx context.Context, request UpdateConsentTextRequestObject) (UpdateConsentTextResponseObject, error)
+	// GetDashboard Counts for the 6 to-do cards (P-A02), for the current billing period
+	// (GET /admin/dashboard)
+	GetDashboard(ctx context.Context, request GetDashboardRequestObject) (GetDashboardResponseObject, error)
 
 	// (GET /admin/invoices/{invoiceId})
 	GetInvoice(ctx context.Context, request GetInvoiceRequestObject) (GetInvoiceResponseObject, error)
@@ -3601,6 +5056,9 @@ type StrictServerInterface interface {
 	// SetInvoiceMeters Enter meter readings (DRAFT only). Lower than previous requires rolloverConfirmed (M-02).
 	// (PATCH /admin/invoices/{invoiceId}/meters)
 	SetInvoiceMeters(ctx context.Context, request SetInvoiceMetersRequestObject) (SetInvoiceMetersResponseObject, error)
+	// ListExpiringLeases Leases ending within the alert window (settings, default 30 days), soonest first
+	// (GET /admin/leases/expiring)
+	ListExpiringLeases(ctx context.Context, request ListExpiringLeasesRequestObject) (ListExpiringLeasesResponseObject, error)
 	// UpdateLease Edit a lease (M-07)
 	// (PATCH /admin/leases/{leaseId})
 	UpdateLease(ctx context.Context, request UpdateLeaseRequestObject) (UpdateLeaseResponseObject, error)
@@ -3625,12 +5083,27 @@ type StrictServerInterface interface {
 	// UpdateRoom Change rent or meter digits. Affects only drafts created afterwards (INV-4).
 	// (PATCH /admin/rooms/{roomNumber})
 	UpdateRoom(ctx context.Context, request UpdateRoomRequestObject) (UpdateRoomResponseObject, error)
+	// ListRoomDocuments Documents uploaded for a room (P-A06), with the scheduled deletion time after move-out
+	// (GET /admin/rooms/{roomNumber}/documents)
+	ListRoomDocuments(ctx context.Context, request ListRoomDocumentsRequestObject) (ListRoomDocumentsResponseObject, error)
 	// CreateLease Add a lease (M-07). Leases of a room may not overlap.
 	// (POST /admin/rooms/{roomNumber}/leases)
 	CreateLease(ctx context.Context, request CreateLeaseRequestObject) (CreateLeaseResponseObject, error)
 	// CreateRecurringCharge Add a monthly service charge (M-08)
 	// (POST /admin/rooms/{roomNumber}/recurring-charges)
 	CreateRecurringCharge(ctx context.Context, request CreateRecurringChargeRequestObject) (CreateRecurringChargeResponseObject, error)
+	// GetSettings Owner settings (P-A13)
+	// (GET /admin/settings)
+	GetSettings(ctx context.Context, request GetSettingsRequestObject) (GetSettingsResponseObject, error)
+
+	// (PATCH /admin/settings)
+	UpdateSettings(ctx context.Context, request UpdateSettingsRequestObject) (UpdateSettingsResponseObject, error)
+	// SetPaymentQr Use an uploaded image as the payment QR shown to tenants (P-T06)
+	// (PUT /admin/settings/payment-qr)
+	SetPaymentQr(ctx context.Context, request SetPaymentQrRequestObject) (SetPaymentQrResponseObject, error)
+	// CreatePaymentQrUploadUrl Get a presigned URL to upload the owner payment QR image
+	// (POST /admin/settings/payment-qr/upload-url)
+	CreatePaymentQrUploadUrl(ctx context.Context, request CreatePaymentQrUploadUrlRequestObject) (CreatePaymentQrUploadUrlResponseObject, error)
 	// ListSlips Slip verification queue (P-A07), oldest first
 	// (GET /admin/slips)
 	ListSlips(ctx context.Context, request ListSlipsRequestObject) (ListSlipsResponseObject, error)
@@ -3676,6 +5149,24 @@ type StrictServerInterface interface {
 	// GetHealth Liveness and database check
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// ListTenantAnnouncements Announcements for tenants (P-T11), newest first
+	// (GET /tenant/announcements)
+	ListTenantAnnouncements(ctx context.Context, request ListTenantAnnouncementsRequestObject) (ListTenantAnnouncementsResponseObject, error)
+	// GetTenantConsent Current consent text and whether the tenant accepted it (M-10)
+	// (GET /tenant/consent)
+	GetTenantConsent(ctx context.Context, request GetTenantConsentRequestObject) (GetTenantConsentResponseObject, error)
+	// AcceptConsent Accept the given consent version (must be the latest)
+	// (POST /tenant/consent)
+	AcceptConsent(ctx context.Context, request AcceptConsentRequestObject) (AcceptConsentResponseObject, error)
+	// ListTenantDocuments The tenant own documents (P-T12)
+	// (GET /tenant/documents)
+	ListTenantDocuments(ctx context.Context, request ListTenantDocumentsRequestObject) (ListTenantDocumentsResponseObject, error)
+	// SubmitDocument Record an uploaded document
+	// (POST /tenant/documents)
+	SubmitDocument(ctx context.Context, request SubmitDocumentRequestObject) (SubmitDocumentResponseObject, error)
+	// CreateDocumentUploadUrl Get a presigned URL to upload an ID card copy or lease contract (after consent)
+	// (POST /tenant/documents/upload-url)
+	CreateDocumentUploadUrl(ctx context.Context, request CreateDocumentUploadUrlRequestObject) (CreateDocumentUploadUrlResponseObject, error)
 	// ListTenantInvoices Invoices of the tenant's room (issued and paid; drafts are hidden), newest first
 	// (GET /tenant/invoices)
 	ListTenantInvoices(ctx context.Context, request ListTenantInvoicesRequestObject) (ListTenantInvoicesResponseObject, error)
@@ -3688,6 +5179,9 @@ type StrictServerInterface interface {
 	// CreateSlipUploadUrl Step 1 — get a presigned URL to upload a slip image directly to storage
 	// (POST /tenant/invoices/{invoiceId}/slips/upload-url)
 	CreateSlipUploadUrl(ctx context.Context, request CreateSlipUploadUrlRequestObject) (CreateSlipUploadUrlResponseObject, error)
+	// GetTenantLeaseAlert Whether the tenant lease ends within the alert window (P-T04 banner)
+	// (GET /tenant/lease-alert)
+	GetTenantLeaseAlert(ctx context.Context, request GetTenantLeaseAlertRequestObject) (GetTenantLeaseAlertResponseObject, error)
 	// ListTenantMaintenanceRequests Repair requests of the tenant's room, newest first
 	// (GET /tenant/maintenance-requests)
 	ListTenantMaintenanceRequests(ctx context.Context, request ListTenantMaintenanceRequestsRequestObject) (ListTenantMaintenanceRequestsResponseObject, error)
@@ -3700,6 +5194,9 @@ type StrictServerInterface interface {
 	// GetTenantMaintenanceRequest One repair request of the tenant's room; 404 for another room's
 	// (GET /tenant/maintenance-requests/{requestId})
 	GetTenantMaintenanceRequest(ctx context.Context, request GetTenantMaintenanceRequestRequestObject) (GetTenantMaintenanceRequestResponseObject, error)
+	// GetPaymentQr The owner payment QR image for tenants to scan (P-T06); 404 until uploaded
+	// (GET /tenant/payment-qr)
+	GetPaymentQr(ctx context.Context, request GetPaymentQrRequestObject) (GetPaymentQrResponseObject, error)
 	// GetTenantRoom The room the logged-in tenant is bound to
 	// (GET /tenant/room)
 	GetTenantRoom(ctx context.Context, request GetTenantRoomRequestObject) (GetTenantRoomResponseObject, error)
@@ -3762,6 +5259,82 @@ type strictHandler struct {
 	options     StrictGinServerOptions
 }
 
+// ListAnnouncements operation middleware
+func (sh *strictHandler) ListAnnouncements(ctx *gin.Context) {
+	var request ListAnnouncementsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAnnouncements(ctx, request.(ListAnnouncementsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAnnouncements")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListAnnouncementsResponseObject); ok {
+		if err := validResponse.VisitListAnnouncementsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListAuditLogs operation middleware
+func (sh *strictHandler) ListAuditLogs(ctx *gin.Context, params ListAuditLogsParams) {
+	var request ListAuditLogsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAuditLogs(ctx, request.(ListAuditLogsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAuditLogs")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListAuditLogsResponseObject); ok {
+		if err := validResponse.VisitListAuditLogsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBillingPeriodRooms operation middleware
+func (sh *strictHandler) ListBillingPeriodRooms(ctx *gin.Context, period Period) {
+	var request ListBillingPeriodRoomsRequestObject
+
+	request.Period = period
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBillingPeriodRooms(ctx, request.(ListBillingPeriodRoomsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBillingPeriodRooms")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListBillingPeriodRoomsResponseObject); ok {
+		if err := validResponse.VisitListBillingPeriodRoomsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetRoomInvoice operation middleware
 func (sh *strictHandler) GetRoomInvoice(ctx *gin.Context, period Period, roomNumber RoomNumber) {
 	var request GetRoomInvoiceRequestObject
@@ -3809,6 +5382,96 @@ func (sh *strictHandler) CreateInvoiceDraft(ctx *gin.Context, period Period, roo
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(CreateInvoiceDraftResponseObject); ok {
 		if err := validResponse.VisitCreateInvoiceDraftResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConsentText operation middleware
+func (sh *strictHandler) GetConsentText(ctx *gin.Context) {
+	var request GetConsentTextRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConsentText(ctx, request.(GetConsentTextRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConsentText")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetConsentTextResponseObject); ok {
+		if err := validResponse.VisitGetConsentTextResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConsentText operation middleware
+func (sh *strictHandler) UpdateConsentText(ctx *gin.Context) {
+	var request UpdateConsentTextRequestObject
+
+	var body UpdateConsentTextJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConsentText(ctx, request.(UpdateConsentTextRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConsentText")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateConsentTextResponseObject); ok {
+		if err := validResponse.VisitUpdateConsentTextResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDashboard operation middleware
+func (sh *strictHandler) GetDashboard(ctx *gin.Context) {
+	var request GetDashboardRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDashboard(ctx, request.(GetDashboardRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDashboard")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetDashboardResponseObject); ok {
+		if err := validResponse.VisitGetDashboardResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -3976,6 +5639,30 @@ func (sh *strictHandler) SetInvoiceMeters(ctx *gin.Context, invoiceId InvoiceId)
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(SetInvoiceMetersResponseObject); ok {
 		if err := validResponse.VisitSetInvoiceMetersResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListExpiringLeases operation middleware
+func (sh *strictHandler) ListExpiringLeases(ctx *gin.Context) {
+	var request ListExpiringLeasesRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListExpiringLeases(ctx, request.(ListExpiringLeasesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListExpiringLeases")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListExpiringLeasesResponseObject); ok {
+		if err := validResponse.VisitListExpiringLeasesResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -4263,6 +5950,32 @@ func (sh *strictHandler) UpdateRoom(ctx *gin.Context, roomNumber RoomNumber) {
 	}
 }
 
+// ListRoomDocuments operation middleware
+func (sh *strictHandler) ListRoomDocuments(ctx *gin.Context, roomNumber RoomNumber) {
+	var request ListRoomDocumentsRequestObject
+
+	request.RoomNumber = roomNumber
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRoomDocuments(ctx, request.(ListRoomDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRoomDocuments")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListRoomDocumentsResponseObject); ok {
+		if err := validResponse.VisitListRoomDocumentsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateLease operation middleware
 func (sh *strictHandler) CreateLease(ctx *gin.Context, roomNumber RoomNumber) {
 	var request CreateLeaseRequestObject
@@ -4344,6 +6057,156 @@ func (sh *strictHandler) CreateRecurringCharge(ctx *gin.Context, roomNumber Room
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(CreateRecurringChargeResponseObject); ok {
 		if err := validResponse.VisitCreateRecurringChargeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSettings operation middleware
+func (sh *strictHandler) GetSettings(ctx *gin.Context) {
+	var request GetSettingsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSettings(ctx, request.(GetSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSettings")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetSettingsResponseObject); ok {
+		if err := validResponse.VisitGetSettingsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSettings operation middleware
+func (sh *strictHandler) UpdateSettings(ctx *gin.Context) {
+	var request UpdateSettingsRequestObject
+
+	var body UpdateSettingsJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSettings(ctx, request.(UpdateSettingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSettings")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateSettingsResponseObject); ok {
+		if err := validResponse.VisitUpdateSettingsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetPaymentQr operation middleware
+func (sh *strictHandler) SetPaymentQr(ctx *gin.Context) {
+	var request SetPaymentQrRequestObject
+
+	var body SetPaymentQrJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SetPaymentQr(ctx, request.(SetPaymentQrRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetPaymentQr")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(SetPaymentQrResponseObject); ok {
+		if err := validResponse.VisitSetPaymentQrResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreatePaymentQrUploadUrl operation middleware
+func (sh *strictHandler) CreatePaymentQrUploadUrl(ctx *gin.Context) {
+	var request CreatePaymentQrUploadUrlRequestObject
+
+	var body CreatePaymentQrUploadUrlJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreatePaymentQrUploadUrl(ctx, request.(CreatePaymentQrUploadUrlRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreatePaymentQrUploadUrl")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreatePaymentQrUploadUrlResponseObject); ok {
+		if err := validResponse.VisitCreatePaymentQrUploadUrlResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -4851,6 +6714,204 @@ func (sh *strictHandler) GetHealth(ctx *gin.Context) {
 	}
 }
 
+// ListTenantAnnouncements operation middleware
+func (sh *strictHandler) ListTenantAnnouncements(ctx *gin.Context) {
+	var request ListTenantAnnouncementsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTenantAnnouncements(ctx, request.(ListTenantAnnouncementsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTenantAnnouncements")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTenantAnnouncementsResponseObject); ok {
+		if err := validResponse.VisitListTenantAnnouncementsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTenantConsent operation middleware
+func (sh *strictHandler) GetTenantConsent(ctx *gin.Context) {
+	var request GetTenantConsentRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTenantConsent(ctx, request.(GetTenantConsentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTenantConsent")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTenantConsentResponseObject); ok {
+		if err := validResponse.VisitGetTenantConsentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptConsent operation middleware
+func (sh *strictHandler) AcceptConsent(ctx *gin.Context) {
+	var request AcceptConsentRequestObject
+
+	var body AcceptConsentJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptConsent(ctx, request.(AcceptConsentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptConsent")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AcceptConsentResponseObject); ok {
+		if err := validResponse.VisitAcceptConsentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTenantDocuments operation middleware
+func (sh *strictHandler) ListTenantDocuments(ctx *gin.Context) {
+	var request ListTenantDocumentsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTenantDocuments(ctx, request.(ListTenantDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTenantDocuments")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTenantDocumentsResponseObject); ok {
+		if err := validResponse.VisitListTenantDocumentsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitDocument operation middleware
+func (sh *strictHandler) SubmitDocument(ctx *gin.Context) {
+	var request SubmitDocumentRequestObject
+
+	var body SubmitDocumentJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitDocument(ctx, request.(SubmitDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitDocument")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(SubmitDocumentResponseObject); ok {
+		if err := validResponse.VisitSubmitDocumentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDocumentUploadUrl operation middleware
+func (sh *strictHandler) CreateDocumentUploadUrl(ctx *gin.Context) {
+	var request CreateDocumentUploadUrlRequestObject
+
+	var body CreateDocumentUploadUrlJSONRequestBody
+	var err error
+	// A request validator built on kin-openapi's openapi3filter with
+	// KeepValidatedValue leaves the value it validated on the body. Bind
+	// that value, matching member names exactly, so the handler receives
+	// what was validated instead of a second, case-insensitive decode.
+	if vb, ok := ctx.Request.Body.(interface{ ValidatedValue() any }); !ok || runtime.BindJSONValue(vb.ValidatedValue(), &body) != nil {
+		err = ctx.ShouldBindJSON(&body)
+	} else if binding.Validator != nil {
+		// ShouldBindJSON runs the struct validator after decoding; keep that.
+		err = binding.Validator.ValidateStruct(&body)
+	}
+	if err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDocumentUploadUrl(ctx, request.(CreateDocumentUploadUrlRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDocumentUploadUrl")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateDocumentUploadUrlResponseObject); ok {
+		if err := validResponse.VisitCreateDocumentUploadUrlResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListTenantInvoices operation middleware
 func (sh *strictHandler) ListTenantInvoices(ctx *gin.Context) {
 	var request ListTenantInvoicesRequestObject
@@ -4982,6 +7043,30 @@ func (sh *strictHandler) CreateSlipUploadUrl(ctx *gin.Context, invoiceId Invoice
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(CreateSlipUploadUrlResponseObject); ok {
 		if err := validResponse.VisitCreateSlipUploadUrlResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTenantLeaseAlert operation middleware
+func (sh *strictHandler) GetTenantLeaseAlert(ctx *gin.Context) {
+	var request GetTenantLeaseAlertRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTenantLeaseAlert(ctx, request.(GetTenantLeaseAlertRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTenantLeaseAlert")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTenantLeaseAlertResponseObject); ok {
+		if err := validResponse.VisitGetTenantLeaseAlertResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -5123,6 +7208,30 @@ func (sh *strictHandler) GetTenantMaintenanceRequest(ctx *gin.Context, requestId
 	}
 }
 
+// GetPaymentQr operation middleware
+func (sh *strictHandler) GetPaymentQr(ctx *gin.Context) {
+	var request GetPaymentQrRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPaymentQr(ctx, request.(GetPaymentQrRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPaymentQr")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetPaymentQrResponseObject); ok {
+		if err := validResponse.VisitGetPaymentQrResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetTenantRoom operation middleware
 func (sh *strictHandler) GetTenantRoom(ctx *gin.Context) {
 	var request GetTenantRoomRequestObject
@@ -5152,104 +7261,138 @@ func (sh *strictHandler) GetTenantRoom(ctx *gin.Context) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"/w==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

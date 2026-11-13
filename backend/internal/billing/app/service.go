@@ -68,6 +68,7 @@ type EventDispatcher interface {
 
 type Service struct {
 	repo    Repository
+	periods PeriodReader
 	tenancy TenancyReader
 	files   storage.FileStorage
 	tx      shared.TxManager
@@ -76,9 +77,9 @@ type Service struct {
 	newID   func() string
 }
 
-func NewService(repo Repository, tenancy TenancyReader, files storage.FileStorage, tx shared.TxManager,
+func NewService(repo Repository, periods PeriodReader, tenancy TenancyReader, files storage.FileStorage, tx shared.TxManager,
 	events EventDispatcher, now func() time.Time, newID func() string) *Service {
-	return &Service{repo: repo, tenancy: tenancy, files: files, tx: tx, events: events, now: now, newID: newID}
+	return &Service{repo: repo, periods: periods, tenancy: tenancy, files: files, tx: tx, events: events, now: now, newID: newID}
 }
 
 // --- utility rates ---
@@ -104,7 +105,7 @@ func (s *Service) ListRates(ctx context.Context) (RatesView, error) {
 }
 
 // CreateRate appends a rate (M-09) and raises UtilityRateChanged (§6.3).
-func (s *Service) CreateRate(ctx context.Context, typ domain.UtilityType, perUnit shared.Money, effectiveFrom time.Time) (domain.UtilityRate, error) {
+func (s *Service) CreateRate(ctx context.Context, typ domain.UtilityType, perUnit shared.Money, effectiveFrom time.Time, announcement string) (domain.UtilityRate, error) {
 	var rate domain.UtilityRate
 	err := s.tx.WithinTx(ctx, func(ctx context.Context) error {
 		latest, err := s.repo.LatestRate(ctx, typ)
@@ -112,7 +113,7 @@ func (s *Service) CreateRate(ctx context.Context, typ domain.UtilityType, perUni
 			return err
 		}
 		var ev domain.UtilityRateChanged
-		if rate, ev, err = domain.NewUtilityRate(s.newID(), typ, perUnit, effectiveFrom, latest, s.now()); err != nil {
+		if rate, ev, err = domain.NewUtilityRate(s.newID(), typ, perUnit, effectiveFrom, announcement, latest, s.now()); err != nil {
 			return err
 		}
 		if err := s.repo.InsertRate(ctx, rate); err != nil {

@@ -294,3 +294,21 @@ func int4(v *int) pgtype.Int4 {
 	}
 	return pgtype.Int4{Int32: int32(*v), Valid: true}
 }
+
+func (r *Repository) LeasesEndingBetween(ctx context.Context, from, to time.Time) ([]app.LeaseWithRoom, error) {
+	rows, err := r.q(ctx).ListLeasesEndingBetween(ctx, sqlcgen.ListLeasesEndingBetweenParams{FromDay: from, ToDay: to})
+	if err != nil {
+		return nil, fmt.Errorf("list leases ending between: %w", err)
+	}
+	out := make([]app.LeaseWithRoom, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, app.LeaseWithRoom{
+			Lease: domain.Lease{
+				ID: row.ID.String(), RoomID: row.RoomID.String(), TenantName: row.TenantName,
+				StartDate: row.StartDate, EndDate: row.EndDate,
+			},
+			RoomNumber: row.RoomNumber,
+		})
+	}
+	return out, nil
+}

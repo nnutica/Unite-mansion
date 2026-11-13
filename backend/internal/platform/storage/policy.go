@@ -50,6 +50,10 @@ func ImageKey(prefix, id, contentType string) string {
 // VerifyImageUpload checks that key was issued under prefix and that the
 // stored object really is an allowed image within the size limit.
 func VerifyImageUpload(ctx context.Context, fs FileStorage, prefix, key string) (ObjectInfo, error) {
+	return verifyUpload(ctx, fs, prefix, key, CheckImage)
+}
+
+func verifyUpload(ctx context.Context, fs FileStorage, prefix, key string, check func(string, int64) error) (ObjectInfo, error) {
 	if !strings.HasPrefix(key, strings.TrimSuffix(prefix, "/")+"/") || strings.Contains(key, "..") {
 		return ObjectInfo{}, ErrInvalidFileKey
 	}
@@ -60,7 +64,7 @@ func VerifyImageUpload(ctx context.Context, fs FileStorage, prefix, key string) 
 	if err != nil {
 		return ObjectInfo{}, err
 	}
-	if err := CheckImage(info.ContentType, info.Size); err != nil {
+	if err := check(info.ContentType, info.Size); err != nil {
 		return ObjectInfo{}, err
 	}
 	return info, nil
@@ -78,4 +82,35 @@ func SHA256(ctx context.Context, fs FileStorage, key string) (string, error) {
 		return "", fmt.Errorf("hash %s: %w", key, err)
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Tenant documents (§6.6): PDF, PNG or JPEG. PDFs of a contract are larger
+// than slip photos, so the limit is 10 MB (technical choice, see report).
+const MaxDocumentBytes = 10 << 20
+
+var documentExt = map[string]string{
+	"application/pdf": "pdf",
+	"image/png":       "png",
+	"image/jpeg":      "jpg",
+}
+
+// CheckDocument validates a declared document upload before presigning.
+func CheckDocument(contentType string, size int64) error {
+	if _, ok := documentExt[contentType]; !ok {
+		return fmt.Errorf("%w: %q (PDF, PNG or JPEG only)", ErrFileTypeNotAllowed, contentType)
+	}
+	if size <= 0 || size > MaxDocumentBytes {
+		return fmt.Errorf("%w: %d bytes (max %d)", ErrFileTooLarge, size, MaxDocumentBytes)
+	}
+	return nil
+}
+
+// DocumentKey builds an object key for a document under prefix.
+func DocumentKey(prefix, id, contentType string) string {
+	return fmt.Sprintf("%s/%s.%s", strings.TrimSuffix(prefix, "/"), id, documentExt[contentType])
+}
+
+// VerifyDocumentUpload is VerifyImageUpload for documents.
+func VerifyDocumentUpload(ctx context.Context, fs FileStorage, prefix, key string) (ObjectInfo, error) {
+	return verifyUpload(ctx, fs, prefix, key, CheckDocument)
 }

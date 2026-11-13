@@ -67,7 +67,11 @@ func (h *Handler) CreateUtilityRate(ctx context.Context, req api.CreateUtilityRa
 	if err != nil {
 		return nil, err
 	}
-	r, err := h.svc.CreateRate(ctx, domain.UtilityType(req.Body.UtilityType), perUnit, req.Body.EffectiveFrom.Time)
+	announcement := ""
+	if req.Body.AnnouncementMessage != nil {
+		announcement = *req.Body.AnnouncementMessage
+	}
+	r, err := h.svc.CreateRate(ctx, domain.UtilityType(req.Body.UtilityType), perUnit, req.Body.EffectiveFrom.Time, announcement)
 	if err != nil {
 		return nil, err
 	}

@@ -240,6 +240,57 @@ func (q *Queries) ListLeasesByRoom(ctx context.Context, roomID uuid.UUID) ([]Lea
 	return items, nil
 }
 
+const listLeasesEndingBetween = `-- name: ListLeasesEndingBetween :many
+SELECT l.id, l.room_id, l.tenant_name, l.start_date, l.end_date, l.created_at, l.updated_at, r.room_number FROM leases l JOIN rooms r ON r.id = l.room_id
+WHERE l.end_date BETWEEN $1::date AND $2::date
+ORDER BY l.end_date, r.floor, r.room_number::int
+`
+
+type ListLeasesEndingBetweenParams struct {
+	FromDay time.Time
+	ToDay   time.Time
+}
+
+type ListLeasesEndingBetweenRow struct {
+	ID         uuid.UUID
+	RoomID     uuid.UUID
+	TenantName string
+	StartDate  time.Time
+	EndDate    time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	RoomNumber string
+}
+
+func (q *Queries) ListLeasesEndingBetween(ctx context.Context, arg ListLeasesEndingBetweenParams) ([]ListLeasesEndingBetweenRow, error) {
+	rows, err := q.db.Query(ctx, listLeasesEndingBetween, arg.FromDay, arg.ToDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLeasesEndingBetweenRow
+	for rows.Next() {
+		var i ListLeasesEndingBetweenRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoomID,
+			&i.TenantName,
+			&i.StartDate,
+			&i.EndDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RoomNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRecurringChargesByRoom = `-- name: ListRecurringChargesByRoom :many
 SELECT id, room_id, name, amount, active, created_at, updated_at FROM recurring_charges WHERE room_id = $1 ORDER BY created_at
 `

@@ -52,6 +52,14 @@ type UtilityRateChanged struct {
 	PerUnit         shared.Money  `json:"perUnit"`
 	PreviousPerUnit *shared.Money `json:"previousPerUnit,omitempty"`
 	EffectiveFrom   string        `json:"effectiveFrom"`
+	// Announcement is the text the admin entered in M-09 for tenants (may be empty).
+	Announcement string `json:"announcement,omitempty"`
 }
 
 func (UtilityRateChanged) EventName() string { return "UtilityRateChanged" }
+
+// RateChangeDetails exposes the event's data to subscribers in other contexts
+// without them importing billing types.
+func (e UtilityRateChanged) RateChangeDetails() (rateID, utilityType string, perUnit shared.Money, effectiveFrom, announcement string) {
+	return e.AggregateID(), string(e.UtilityType), e.PerUnit, e.EffectiveFrom, e.Announcement
+}

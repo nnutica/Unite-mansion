@@ -13,6 +13,7 @@ import (
 	"unite-mansion/internal/platform/auth"
 	"unite-mansion/internal/platform/httpx"
 	"unite-mansion/internal/platform/storage"
+	"unite-mansion/internal/shared"
 )
 
 // UploadErrorMappings are shared by every endpoint that accepts uploads.
@@ -176,4 +177,33 @@ func toSummary(s app.InvoiceSummary) api.InvoiceSummary {
 
 func toQueueItem(it app.SlipQueueItem) api.SlipQueueItemJSONResponse {
 	return api.SlipQueueItemJSONResponse{Slip: toSlip(it.Slip), RoomNumber: it.Invoice.RoomNumber, Invoice: toSummary(it.Invoice)}
+}
+
+// ListBillingPeriodRooms is "สถานะบิลรอบนี้" (P-A03): all rooms in one call.
+func (h *Handler) ListBillingPeriodRooms(ctx context.Context, req api.ListBillingPeriodRoomsRequestObject) (api.ListBillingPeriodRoomsResponseObject, error) {
+	period, err := shared.ParseBillingPeriod(req.Period)
+	if err != nil {
+		return nil, err
+	}
+	rooms, err := h.svc.PeriodRooms(ctx, period)
+	if err != nil {
+		return nil, err
+	}
+	out := make(api.ListBillingPeriodRooms200JSONResponse, 0, len(rooms))
+	for _, r := range rooms {
+		row := api.BillingRoomStatus{
+			RoomNumber: r.RoomNumber, Floor: r.Floor, HasLease: r.HasLease,
+			Status: api.BillDisplayStatus(r.DisplayStatus), InvoiceNumber: r.InvoiceNumber,
+		}
+		if r.InvoiceID != nil {
+			id := uuid.MustParse(*r.InvoiceID)
+			row.InvoiceId = &id
+		}
+		if r.Total != nil {
+			total := r.Total.String()
+			row.Total = &total
+		}
+		out = append(out, row)
+	}
+	return out, nil
 }

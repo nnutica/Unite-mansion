@@ -88,3 +88,26 @@ func TestSHA256(t *testing.T) {
 		t.Fatalf("hashes %q %q", a, b)
 	}
 }
+
+func TestCheckDocument(t *testing.T) {
+	if err := CheckDocument("application/pdf", MaxDocumentBytes); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckDocument("application/pdf", MaxDocumentBytes+1); !errors.Is(err, ErrFileTooLarge) {
+		t.Fatalf("too large err = %v", err)
+	}
+	if err := CheckDocument("text/plain", 1); !errors.Is(err, ErrFileTypeNotAllowed) {
+		t.Fatalf("text err = %v", err)
+	}
+	if got := DocumentKey("documents/acc", "x", "application/pdf"); got != "documents/acc/x.pdf" {
+		t.Fatalf("DocumentKey = %q", got)
+	}
+	// A PDF is fine as a document but not as a slip image.
+	fs := memStore{"documents/acc/x.pdf": {Size: 100, ContentType: "application/pdf"}}
+	if _, err := VerifyDocumentUpload(context.Background(), fs, "documents/acc", "documents/acc/x.pdf"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyImageUpload(context.Background(), fs, "documents/acc", "documents/acc/x.pdf"); !errors.Is(err, ErrFileTypeNotAllowed) {
+		t.Fatalf("pdf as image err = %v", err)
+	}
+}

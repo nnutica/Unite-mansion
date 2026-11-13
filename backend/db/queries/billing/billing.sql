@@ -101,3 +101,19 @@ SELECT sqlc.embed(s),
 FROM payment_slips s
 JOIN invoices i ON i.id = s.invoice_id
 WHERE s.id = $1;
+
+-- name: ListPeriodRoomStatus :many
+-- Read model for P-A03 (context.md §4 allows cross-table reads for dashboards/reports).
+SELECT r.room_number, r.floor,
+       EXISTS (SELECT 1 FROM leases l
+               WHERE l.room_id = r.id
+                 AND l.start_date <= sqlc.arg(last_day)::date
+                 AND l.end_date >= sqlc.arg(first_day)::date)::bool AS has_lease,
+       i.id AS invoice_id, i.invoice_number, i.total, i.status,
+       EXISTS (SELECT 1 FROM payment_slips s WHERE s.invoice_id = i.id AND s.status = 'PENDING')::bool AS has_pending_slip
+FROM rooms r
+LEFT JOIN invoices i ON i.room_id = r.id AND i.billing_period = sqlc.arg(period)::text
+ORDER BY r.floor, r.room_number::int;
+
+-- name: CountPendingSlips :one
+SELECT count(*) FROM payment_slips WHERE status = 'PENDING';

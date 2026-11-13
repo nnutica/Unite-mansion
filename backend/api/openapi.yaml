@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: B Mansion API
-  version: 0.3.0
+  version: 1.0.0
   description: |
     Contract-first API. Edit this file first, then run `go generate ./...`
     in backend/ and the frontend client generator.
@@ -24,6 +24,8 @@ tags:
   - name: invoices
   - name: slips
   - name: maintenance
+  - name: communication
+  - name: documents
 
 security:
   - sessionCookie: []
@@ -225,6 +227,12 @@ paths:
       operationId: listRooms
       summary: All rooms (P-A05). Not paginated.
       parameters:
+        - name: leaseExpiring
+          in: query
+          required: false
+          description: Only rooms whose lease ends within the alert window
+          schema:
+            type: boolean
         - name: floor
           in: query
           required: false
@@ -776,6 +784,343 @@ paths:
         default:
           $ref: "#/components/responses/Problem"
 
+  # ------------------------------------------------- billing status (2.5)
+  /admin/billing-periods/{period}/rooms:
+    get:
+      tags: [invoices]
+      operationId: listBillingPeriodRooms
+      summary: Billing status of every room for a period (P-A03), one call, not paginated
+      parameters:
+        - $ref: "#/components/parameters/Period"
+      responses:
+        "200":
+          description: All rooms ordered by floor and number
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillingRoomStatus"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/dashboard:
+    get:
+      tags: [system]
+      operationId: getDashboard
+      summary: Counts for the 6 to-do cards (P-A02), for the current billing period
+      responses:
+        "200":
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  # ---------------------------------------------------- communication (5)
+  /admin/announcements:
+    get:
+      tags: [communication]
+      operationId: listAnnouncements
+      summary: Announcements, newest first (created automatically when rates change)
+      responses:
+        "200":
+          description: Announcements, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Announcement"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/announcements:
+    get:
+      tags: [communication]
+      operationId: listTenantAnnouncements
+      summary: Announcements for tenants (P-T11), newest first
+      responses:
+        "200":
+          description: Announcements, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Announcement"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/settings:
+    get:
+      tags: [communication]
+      operationId: getSettings
+      summary: Owner settings (P-A13)
+      responses:
+        "200":
+          $ref: "#/components/responses/Settings"
+        default:
+          $ref: "#/components/responses/Problem"
+    patch:
+      tags: [communication]
+      operationId: updateSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Settings"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/settings/payment-qr/upload-url:
+    post:
+      tags: [communication]
+      operationId: createPaymentQrUploadUrl
+      summary: Get a presigned URL to upload the owner payment QR image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/UploadUrl"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/settings/payment-qr:
+    put:
+      tags: [communication]
+      operationId: setPaymentQr
+      summary: Use an uploaded image as the payment QR shown to tenants (P-T06)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitFileRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Settings"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/payment-qr:
+    get:
+      tags: [communication]
+      operationId: getPaymentQr
+      summary: The owner payment QR image for tenants to scan (P-T06); 404 until uploaded
+      responses:
+        "200":
+          description: Signed image URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentQr"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/leases/expiring:
+    get:
+      tags: [communication]
+      operationId: listExpiringLeases
+      summary: Leases ending within the alert window (settings, default 30 days), soonest first
+      responses:
+        "200":
+          description: Expiring leases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpiringLease"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/lease-alert:
+    get:
+      tags: [communication]
+      operationId: getTenantLeaseAlert
+      summary: Whether the tenant lease ends within the alert window (P-T04 banner)
+      responses:
+        "200":
+          description: Lease alert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaseAlert"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  # ----------------------------------------- tenant documents + PDPA (6)
+  /tenant/consent:
+    get:
+      tags: [documents]
+      operationId: getTenantConsent
+      summary: Current consent text and whether the tenant accepted it (M-10)
+      responses:
+        "200":
+          $ref: "#/components/responses/ConsentStatus"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      tags: [documents]
+      operationId: acceptConsent
+      summary: Accept the given consent version (must be the latest)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptConsentRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ConsentStatus"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/consent-text:
+    get:
+      tags: [documents]
+      operationId: getConsentText
+      responses:
+        "200":
+          $ref: "#/components/responses/ConsentText"
+        default:
+          $ref: "#/components/responses/Problem"
+    put:
+      tags: [documents]
+      operationId: updateConsentText
+      summary: Publish a new consent text; tenants must accept the new version before uploading
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConsentTextRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ConsentText"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/documents/upload-url:
+    post:
+      tags: [documents]
+      operationId: createDocumentUploadUrl
+      summary: Get a presigned URL to upload an ID card copy or lease contract (after consent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUploadRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/UploadUrl"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /tenant/documents:
+    get:
+      tags: [documents]
+      operationId: listTenantDocuments
+      summary: The tenant own documents (P-T12)
+      responses:
+        "200":
+          description: Documents, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TenantDocument"
+        default:
+          $ref: "#/components/responses/Problem"
+    post:
+      tags: [documents]
+      operationId: submitDocument
+      summary: Record an uploaded document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitDocumentRequest"
+      responses:
+        "201":
+          description: Document stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantDocument"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  /admin/rooms/{roomNumber}/documents:
+    get:
+      tags: [documents]
+      operationId: listRoomDocuments
+      summary: Documents uploaded for a room (P-A06), with the scheduled deletion time after move-out
+      parameters:
+        - $ref: "#/components/parameters/RoomNumber"
+      responses:
+        "200":
+          description: Documents, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TenantDocument"
+        default:
+          $ref: "#/components/responses/Problem"
+
+  # ----------------------------------------------------------- audit (7)
+  /admin/audit-logs:
+    get:
+      tags: [system]
+      operationId: listAuditLogs
+      summary: Audit log, newest first; pass nextCursor from the previous page as cursor to continue
+      parameters:
+        - name: aggregateId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: false
+          description: nextCursor of the previous page (opaque)
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: One page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+        default:
+          $ref: "#/components/responses/Problem"
+
+
 components:
   securitySchemes:
     sessionCookie:
@@ -841,6 +1186,24 @@ components:
         format: uuid
 
   responses:
+    Settings:
+      description: Owner settings
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Settings"
+    ConsentStatus:
+      description: Consent status of the tenant
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ConsentStatus"
+    ConsentText:
+      description: Current consent text
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ConsentText"
     Problem:
       description: RFC 9457 Problem Details
       content:
@@ -1205,6 +1568,9 @@ components:
       type: object
       required: [utilityType, perUnit, effectiveFrom]
       properties:
+        announcementMessage:
+          type: string
+          description: Text of the announcement created for tenants (M-09); a standard text is used when empty
         utilityType:
           $ref: "#/components/schemas/UtilityType"
         perUnit:
@@ -1534,3 +1900,250 @@ components:
       properties:
         status:
           $ref: "#/components/schemas/MaintenanceStatus"
+
+    # billing status + dashboard
+    BillingRoomStatus:
+      type: object
+      required: [roomNumber, floor, hasLease, status]
+      properties:
+        roomNumber:
+          type: string
+        floor:
+          type: integer
+        hasLease:
+          type: boolean
+          description: A lease overlaps the month of the period; rooms without one cannot be billed
+        status:
+          $ref: "#/components/schemas/BillDisplayStatus"
+        invoiceId:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+        total:
+          $ref: "#/components/schemas/Money"
+
+    Dashboard:
+      type: object
+      required: [billingPeriod, pendingSlips, unpaidRooms, unbilledRooms, newMaintenanceRequests, expiringLeases, pendingAccounts]
+      properties:
+        billingPeriod:
+          $ref: "#/components/schemas/BillingPeriod"
+        pendingSlips:
+          type: integer
+        unpaidRooms:
+          type: integer
+          description: Invoices of the period that are ISSUED, OVERDUE or PENDING_VERIFICATION
+        unbilledRooms:
+          type: integer
+          description: Rooms with a lease in the period and no invoice yet
+        newMaintenanceRequests:
+          type: integer
+        expiringLeases:
+          type: integer
+        pendingAccounts:
+          type: integer
+
+    # communication
+    Announcement:
+      type: object
+      required: [id, title, message, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Settings:
+      type: object
+      required: [leaseExpiryAlertDays]
+      properties:
+        leaseExpiryAlertDays:
+          type: integer
+        paymentQrUrl:
+          type: string
+          description: Short-lived signed URL of the payment QR; absent until uploaded
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        leaseExpiryAlertDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+
+    SubmitFileRequest:
+      type: object
+      required: [fileKey]
+      properties:
+        fileKey:
+          type: string
+
+    PaymentQr:
+      type: object
+      required: [imageUrl]
+      properties:
+        imageUrl:
+          type: string
+          description: Short-lived signed URL (5 minutes)
+
+    ExpiringLease:
+      type: object
+      required: [roomNumber, lease, daysLeft]
+      properties:
+        roomNumber:
+          type: string
+        lease:
+          $ref: "#/components/schemas/Lease"
+        daysLeft:
+          type: integer
+
+    LeaseAlert:
+      type: object
+      required: [expiring]
+      properties:
+        expiring:
+          type: boolean
+        endDate:
+          type: string
+          format: date
+        daysLeft:
+          type: integer
+
+    # documents + consent
+    DocumentType:
+      type: string
+      enum: [ID_CARD_COPY, LEASE_CONTRACT]
+
+    ConsentStatus:
+      type: object
+      required: [version, text, accepted]
+      properties:
+        version:
+          type: integer
+        text:
+          type: string
+        accepted:
+          type: boolean
+          description: The tenant accepted this (latest) version
+        acceptedAt:
+          type: string
+          format: date-time
+
+    AcceptConsentRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: integer
+
+    ConsentText:
+      type: object
+      required: [version, text, createdAt]
+      properties:
+        version:
+          type: integer
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateConsentTextRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    DocumentUploadRequest:
+      type: object
+      required: [type, contentType, sizeBytes]
+      properties:
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        contentType:
+          type: string
+          enum: [application/pdf, image/png, image/jpeg]
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 10485760
+          description: Exact file size (max 10 MB)
+
+    SubmitDocumentRequest:
+      type: object
+      required: [type, fileKey]
+      properties:
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        fileKey:
+          type: string
+
+    TenantDocument:
+      type: object
+      required: [id, type, contentType, url, uploadedAt, username]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        contentType:
+          type: string
+        url:
+          type: string
+          description: Short-lived signed URL (5 minutes)
+        uploadedAt:
+          type: string
+          format: date-time
+        username:
+          type: string
+          description: Account that uploaded it
+        purgeAt:
+          type: string
+          format: date-time
+          description: Set after the account is unbound; the file is deleted at this time (PDPA, 30 days)
+
+    # audit
+    AuditLogEntry:
+      type: object
+      required: [id, eventName, aggregateId, actorType, payload, occurredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventName:
+          type: string
+        aggregateId:
+          type: string
+        actorType:
+          type: string
+          enum: [ADMIN, TENANT, SYSTEM]
+        actorId:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+
+    AuditLogPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        nextCursor:
+          type: string
+          description: Opaque; pass as cursor to get the next page. Absent on the last page.

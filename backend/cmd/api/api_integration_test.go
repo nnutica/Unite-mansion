@@ -35,6 +35,7 @@ func (c *clock) now() time.Time  { c.mu.Lock(); defer c.mu.Unlock(); return c.t 
 func (c *clock) set(t time.Time) { c.mu.Lock(); defer c.mu.Unlock(); c.t = t }
 
 type env struct {
+	app   *application
 	t     *testing.T
 	pool  *pgxpool.Pool
 	clock *clock
@@ -58,13 +59,13 @@ func newEnvWithStorage(t *testing.T, files storage.FileStorage) *env {
 		t.Fatal(err)
 	}
 
-	router, err := newRouter(deps{pool: pool, files: files, log: slog.New(slog.NewTextHandler(io.Discard, nil)), now: clk.now})
+	app, err := newApplication(deps{pool: pool, files: files, log: slog.New(slog.NewTextHandler(io.Discard, nil)), now: clk.now})
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(router)
+	srv := httptest.NewServer(app.handler)
 	t.Cleanup(srv.Close)
-	return &env{t: t, pool: pool, clock: clk, url: srv.URL + basePath}
+	return &env{app: app, t: t, pool: pool, clock: clk, url: srv.URL + basePath}
 }
 
 // client is one browser: it keeps its own session cookie.

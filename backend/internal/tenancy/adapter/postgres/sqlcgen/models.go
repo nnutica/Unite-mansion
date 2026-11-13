@@ -20,6 +20,15 @@ type Admin struct {
 	UpdatedAt    time.Time
 }
 
+type Announcement struct {
+	ID        uuid.UUID
+	Title     string
+	Message   string
+	Source    string
+	SourceID  string
+	CreatedAt time.Time
+}
+
 type AuditLog struct {
 	ID          uuid.UUID
 	EventName   string
@@ -29,6 +38,12 @@ type AuditLog struct {
 	Payload     []byte
 	OccurredAt  time.Time
 	RecordedAt  time.Time
+}
+
+type ConsentText struct {
+	Version   int32
+	Body      string
+	CreatedAt time.Time
 }
 
 type Invoice struct {
@@ -134,6 +149,13 @@ type Session struct {
 	CreatedAt   time.Time
 }
 
+type Setting struct {
+	ID                   bool
+	LeaseExpiryAlertDays int32
+	PaymentQrKey         pgtype.Text
+	UpdatedAt            time.Time
+}
+
 type TenantAccount struct {
 	ID           uuid.UUID
 	Username     string
@@ -145,6 +167,24 @@ type TenantAccount struct {
 	UnassignedAt *time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+type TenantConsent struct {
+	AccountID  uuid.UUID
+	Version    int32
+	AcceptedAt time.Time
+}
+
+type TenantDocument struct {
+	ID           uuid.UUID
+	AccountID    uuid.UUID
+	RoomID       uuid.UUID
+	DocumentType string
+	FileKey      string
+	ContentType  string
+	SizeBytes    int64
+	UploadedAt   time.Time
+	PurgeAt      *time.Time
 }
 
 type UtilityRate struct {

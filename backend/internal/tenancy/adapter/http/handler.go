@@ -42,13 +42,19 @@ type AccountDirectory interface {
 	ActiveAccountsByRoom(ctx context.Context) (map[string]RoomAccount, error) // keyed by room ID
 }
 
+// ExpiryDirectory is implemented by communication (it owns the alert window).
+type ExpiryDirectory interface {
+	ExpiringRoomNumbers(ctx context.Context) (map[string]bool, error)
+}
+
 type Handler struct {
 	svc      *app.Service
 	accounts AccountDirectory
+	expiry   ExpiryDirectory
 }
 
-func NewHandler(svc *app.Service, accounts AccountDirectory) *Handler {
-	return &Handler{svc: svc, accounts: accounts}
+func NewHandler(svc *app.Service, accounts AccountDirectory, expiry ExpiryDirectory) *Handler {
+	return &Handler{svc: svc, accounts: accounts, expiry: expiry}
 }
 
 func (h *Handler) ListRooms(ctx context.Context, req api.ListRoomsRequestObject) (api.ListRoomsResponseObject, error) {
@@ -56,12 +62,21 @@ func (h *Handler) ListRooms(ctx context.Context, req api.ListRoomsRequestObject)
 	if err != nil {
 		return nil, err
 	}
+	var expiring map[string]bool
+	if req.Params.LeaseExpiring != nil && *req.Params.LeaseExpiring {
+		if expiring, err = h.expiry.ExpiringRoomNumbers(ctx); err != nil {
+			return nil, err
+		}
+	}
 	accounts, err := h.accounts.ActiveAccountsByRoom(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make(api.ListRooms200JSONResponse, 0, len(rooms))
 	for _, r := range rooms {
+		if expiring != nil && !expiring[r.Room.Number] {
+			continue
+		}
 		out = append(out, toRoom(r, accounts))
 	}
 	return out, nil

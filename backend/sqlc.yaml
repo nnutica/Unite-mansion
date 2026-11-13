@@ -13,6 +13,9 @@ overrides:
           type: NullUUID
       - db_type: pg_catalog.numeric
         go_type: github.com/shopspring/decimal.Decimal
+      - db_type: pg_catalog.numeric
+        nullable: true
+        go_type: github.com/shopspring/decimal.NullDecimal
       - db_type: timestamptz
         go_type: time.Time
       - db_type: timestamptz
@@ -59,3 +62,10 @@ sql:
       go:
         <<: *gen
         out: internal/maintenance/adapter/postgres/sqlcgen
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries/communication
+    gen:
+      go:
+        <<: *gen
+        out: internal/communication/adapter/postgres/sqlcgen

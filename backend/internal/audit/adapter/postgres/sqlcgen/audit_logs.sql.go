@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -36,6 +37,59 @@ func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) 
 		arg.OccurredAt,
 	)
 	return err
+}
+
+const listAuditLogs = `-- name: ListAuditLogs :many
+SELECT id, event_name, aggregate_id, actor_type, actor_id, payload, occurred_at, recorded_at
+FROM audit_logs
+WHERE ($1::text IS NULL OR aggregate_id = $1::text)
+  AND ($2::timestamptz IS NULL
+       OR (occurred_at, id) < ($2::timestamptz, $3::uuid))
+ORDER BY occurred_at DESC, id DESC
+LIMIT $4
+`
+
+type ListAuditLogsParams struct {
+	AggregateID pgtype.Text
+	CursorAt    *time.Time
+	CursorID    uuid.NullUUID
+	RowLimit    int32
+}
+
+// Newest first, keyset-paged on (occurred_at, id): unique even when several
+// events share a timestamp, so no row is skipped or repeated.
+func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogs,
+		arg.AggregateID,
+		arg.CursorAt,
+		arg.CursorID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventName,
+			&i.AggregateID,
+			&i.ActorType,
+			&i.ActorID,
+			&i.Payload,
+			&i.OccurredAt,
+			&i.RecordedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAuditLogsByAggregate = `-- name: ListAuditLogsByAggregate :many

@@ -18,6 +18,7 @@ type Repository interface {
 
 	LeasesByRoom(ctx context.Context, roomID string) ([]domain.Lease, error)
 	LeasesActiveOn(ctx context.Context, date time.Time) ([]domain.Lease, error)
+	LeasesEndingBetween(ctx context.Context, from, to time.Time) ([]LeaseWithRoom, error)
 	LeaseForUpdate(ctx context.Context, id string) (domain.Lease, error) // ErrLeaseNotFound
 	InsertLease(ctx context.Context, l domain.Lease) error               // ErrLeaseOverlap
 	UpdateLease(ctx context.Context, l domain.Lease) error               // ErrLeaseOverlap
@@ -271,4 +272,29 @@ func (s *Service) detail(ctx context.Context, room domain.Room) (RoomDetail, err
 		Leases:      leases,
 		Charges:     charges,
 	}, nil
+}
+
+// LeaseWithRoom is a lease with its room number, for alerts.
+type LeaseWithRoom struct {
+	domain.Lease
+	RoomNumber string
+}
+
+// LeasesEndingBetween lists leases whose end date is within [from, to]
+// (dates), soonest first. Used by communication for expiry alerts.
+func (s *Service) LeasesEndingBetween(ctx context.Context, from, to time.Time) ([]LeaseWithRoom, error) {
+	list, err := s.repo.LeasesEndingBetween(ctx, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("leases ending between: %w", err)
+	}
+	return list, nil
+}
+
+// ActiveLeaseOfRoom returns the lease in effect today for roomID, or nil.
+func (s *Service) ActiveLeaseOfRoom(ctx context.Context, roomID string) (*domain.Lease, error) {
+	leases, err := s.repo.LeasesByRoom(ctx, roomID)
+	if err != nil {
+		return nil, fmt.Errorf("active lease: %w", err)
+	}
+	return domain.ActiveLease(leases, shared.DateOf(s.now())), nil
 }

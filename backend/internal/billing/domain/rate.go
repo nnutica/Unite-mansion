@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"unite-mansion/internal/shared"
@@ -27,7 +28,7 @@ type UtilityRate struct {
 
 // NewUtilityRate validates a new rate against the latest rate of the same
 // type (nil if none). History stays linear: a new rate must start later.
-func NewUtilityRate(id string, typ UtilityType, perUnit shared.Money, effectiveFrom time.Time, latest *UtilityRate, now time.Time) (UtilityRate, UtilityRateChanged, error) {
+func NewUtilityRate(id string, typ UtilityType, perUnit shared.Money, effectiveFrom time.Time, announcement string, latest *UtilityRate, now time.Time) (UtilityRate, UtilityRateChanged, error) {
 	if !typ.Valid() {
 		return UtilityRate{}, UtilityRateChanged{}, fmt.Errorf("%w: type %q", ErrInvalidRate, typ)
 	}
@@ -46,6 +47,7 @@ func NewUtilityRate(id string, typ UtilityType, perUnit shared.Money, effectiveF
 		UtilityType:   typ,
 		PerUnit:       perUnit,
 		EffectiveFrom: effectiveFrom.Format(time.DateOnly),
+		Announcement:  strings.TrimSpace(announcement),
 	}
 	if latest != nil {
 		prev := latest.PerUnit

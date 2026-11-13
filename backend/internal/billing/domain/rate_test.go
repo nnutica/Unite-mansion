@@ -21,7 +21,7 @@ func TestNewUtilityRate(t *testing.T) {
 	now := time.Date(2026, 11, 13, 3, 0, 0, 0, time.UTC)
 	latest := &UtilityRate{Type: Electricity, PerUnit: money(t, "6.00"), EffectiveFrom: shared.NewDate(2000, 1, 1)}
 
-	rate, ev, err := NewUtilityRate("r2", Electricity, money(t, "7.50"), shared.NewDate(2026, 12, 1), latest, now)
+	rate, ev, err := NewUtilityRate("r2", Electricity, money(t, "7.50"), shared.NewDate(2026, 12, 1), "", latest, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestNewUtilityRate(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if _, _, err := NewUtilityRate("x", c.typ, money(t, c.perUnit), c.from, latest, now); !errors.Is(err, c.wantErr) {
+			if _, _, err := NewUtilityRate("x", c.typ, money(t, c.perUnit), c.from, "", latest, now); !errors.Is(err, c.wantErr) {
 				t.Fatalf("err = %v, want %v", err, c.wantErr)
 			}
 		})

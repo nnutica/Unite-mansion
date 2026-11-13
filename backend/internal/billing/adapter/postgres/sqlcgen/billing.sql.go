@@ -14,6 +14,17 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const countPendingSlips = `-- name: CountPendingSlips :one
+SELECT count(*) FROM payment_slips WHERE status = 'PENDING'
+`
+
+func (q *Queries) CountPendingSlips(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countPendingSlips)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteInvoiceLines = `-- name: DeleteInvoiceLines :exec
 DELETE FROM invoice_lines WHERE invoice_id = $1
 `
@@ -481,6 +492,66 @@ func (q *Queries) ListIssuedReadingsBefore(ctx context.Context, arg ListIssuedRe
 			&i.WaterPrevious,
 			&i.WaterCurrent,
 			&i.WaterMeterDigits,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPeriodRoomStatus = `-- name: ListPeriodRoomStatus :many
+SELECT r.room_number, r.floor,
+       EXISTS (SELECT 1 FROM leases l
+               WHERE l.room_id = r.id
+                 AND l.start_date <= $1::date
+                 AND l.end_date >= $2::date)::bool AS has_lease,
+       i.id AS invoice_id, i.invoice_number, i.total, i.status,
+       EXISTS (SELECT 1 FROM payment_slips s WHERE s.invoice_id = i.id AND s.status = 'PENDING')::bool AS has_pending_slip
+FROM rooms r
+LEFT JOIN invoices i ON i.room_id = r.id AND i.billing_period = $3::text
+ORDER BY r.floor, r.room_number::int
+`
+
+type ListPeriodRoomStatusParams struct {
+	LastDay  time.Time
+	FirstDay time.Time
+	Period   string
+}
+
+type ListPeriodRoomStatusRow struct {
+	RoomNumber     string
+	Floor          int32
+	HasLease       bool
+	InvoiceID      uuid.NullUUID
+	InvoiceNumber  pgtype.Text
+	Total          decimal.NullDecimal
+	Status         pgtype.Text
+	HasPendingSlip bool
+}
+
+// Read model for P-A03 (context.md §4 allows cross-table reads for dashboards/reports).
+func (q *Queries) ListPeriodRoomStatus(ctx context.Context, arg ListPeriodRoomStatusParams) ([]ListPeriodRoomStatusRow, error) {
+	rows, err := q.db.Query(ctx, listPeriodRoomStatus, arg.LastDay, arg.FirstDay, arg.Period)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPeriodRoomStatusRow
+	for rows.Next() {
+		var i ListPeriodRoomStatusRow
+		if err := rows.Scan(
+			&i.RoomNumber,
+			&i.Floor,
+			&i.HasLease,
+			&i.InvoiceID,
+			&i.InvoiceNumber,
+			&i.Total,
+			&i.Status,
+			&i.HasPendingSlip,
 		); err != nil {
 			return nil, err
 		}

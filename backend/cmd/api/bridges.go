@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"time"
 
 	billingapp "unite-mansion/internal/billing/app"
 	billingdomain "unite-mansion/internal/billing/domain"
+	commapp "unite-mansion/internal/communication/app"
 	identityapp "unite-mansion/internal/identity/app"
 	"unite-mansion/internal/shared"
 	tenancyhttp "unite-mansion/internal/tenancy/adapter/http"
@@ -80,4 +82,42 @@ func (b billingTenancy) RoomIDByNumber(ctx context.Context, roomNumber string) (
 		return "", billingapp.ErrRoomNotFound
 	}
 	return id, err
+}
+
+// communicationLeases implements commapp.LeaseReader.
+type communicationLeases struct{ tenancy *tenancyapp.Service }
+
+func (b communicationLeases) LeasesEndingBetween(ctx context.Context, from, to time.Time) ([]commapp.Lease, error) {
+	list, err := b.tenancy.LeasesEndingBetween(ctx, from, to)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]commapp.Lease, 0, len(list))
+	for _, l := range list {
+		out = append(out, commapp.Lease{ID: l.ID, RoomNumber: l.RoomNumber, TenantName: l.TenantName, StartDate: l.StartDate, EndDate: l.EndDate})
+	}
+	return out, nil
+}
+
+func (b communicationLeases) ActiveLeaseOfRoom(ctx context.Context, roomID string) (*commapp.Lease, error) {
+	l, err := b.tenancy.ActiveLeaseOfRoom(ctx, roomID)
+	if err != nil || l == nil {
+		return nil, err
+	}
+	return &commapp.Lease{ID: l.ID, TenantName: l.TenantName, StartDate: l.StartDate, EndDate: l.EndDate}, nil
+}
+
+// tenancyUsernames implements tenancyapp.UsernameDirectory.
+type tenancyUsernames struct{ identity *identityapp.Service }
+
+func (b tenancyUsernames) Usernames(ctx context.Context) (map[string]string, error) {
+	accounts, err := b.identity.ListTenantAccounts(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(accounts))
+	for _, a := range accounts {
+		out[a.ID] = a.Username
+	}
+	return out, nil
 }

@@ -182,3 +182,46 @@ func toSlip(row sqlcgen.PaymentSlip) *domain.PaymentSlip {
 	}
 	return s
 }
+
+var _ app.PeriodReader = (*Repository)(nil)
+
+func (r *Repository) PeriodRoomStatus(ctx context.Context, period shared.BillingPeriod) ([]app.RoomStatusRow, error) {
+	rows, err := r.q(ctx).ListPeriodRoomStatus(ctx, sqlcgen.ListPeriodRoomStatusParams{
+		FirstDay: period.FirstDay(), LastDay: period.LastDay(), Period: period.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("period room status: %w", err)
+	}
+	out := make([]app.RoomStatusRow, 0, len(rows))
+	for _, row := range rows {
+		r := app.RoomStatusRow{RoomNumber: row.RoomNumber, Floor: int(row.Floor), HasLease: row.HasLease, HasPendingSlip: row.HasPendingSlip}
+		if row.InvoiceID.Valid {
+			id := row.InvoiceID.UUID.String()
+			r.InvoiceID = &id
+		}
+		if row.InvoiceNumber.Valid {
+			r.InvoiceNumber = &row.InvoiceNumber.String
+		}
+		if row.Total.Valid {
+			t, err := money(row.Total.Decimal)
+			if err != nil {
+				return nil, err
+			}
+			r.Total = &t
+		}
+		if row.Status.Valid {
+			st := domain.Status(row.Status.String)
+			r.Status = &st
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+func (r *Repository) CountPendingSlips(ctx context.Context) (int, error) {
+	n, err := r.q(ctx).CountPendingSlips(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count pending slips: %w", err)
+	}
+	return int(n), nil
+}
