@@ -1,0 +1,15 @@
+# Local Postgres for development and integration tests.
+# Alternatively point DATABASE_URL at a Neon dev branch.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: bmansion
+      POSTGRES_PASSWORD: bmansion
+      POSTGRES_DB: bmansion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

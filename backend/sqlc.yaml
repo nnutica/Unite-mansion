@@ -1,0 +1,4 @@
+# One block per bounded context: queries in db/queries/<context>/, output to
+# internal/<context>/adapter/postgres/sqlcgen. Run: go generate ./...
+version: "2"
+sql: []

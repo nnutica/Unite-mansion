@@ -1,0 +1,28 @@
+# Project documents stay local (not public)
+/Claude/Backend-doc/
+/Claude/Frontend-doc/
+
+# Agent local state
+.claude/settings.local.json
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Backend
+/backend/.storage/
+/backend/bin/
+*.exe
+coverage.out
+
+# Frontend
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
