@@ -2,6 +2,61 @@ openapi: 3.0.3
 info:
   title: B Mansion API
   version: 0.1.0
+  description: |
+    Contract-first API. Edit this file first, then run `go generate ./...`
+    in backend/ and the frontend client generator.
+    Money is a decimal string with 2 places (e.g. "4512.00"), timestamps are
+    ISO 8601 UTC, billing periods are `yyyy-mm`. Errors are RFC 9457
+    Problem Details with a stable `code`.
 servers:
   - url: /api/v1
-paths: {}
+tags:
+  - name: system
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Liveness and database check
+      responses:
+        "200":
+          description: Service is up and the database is reachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        default:
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: RFC 9457 Problem Details
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [OK]
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+          description: Stable UPPER_SNAKE_CASE error code, mapped to a Thai message by the frontend
+        detail:
+          type: string
+        requestId:
+          type: string

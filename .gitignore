@@ -1,6 +1,6 @@
 # Project documents stay local (not public)
-/Claude/Backend-doc/
-/Claude/Frontend-doc/
+/.claude/Backend-doc/
+/.claude/Frontend-doc/
 
 # Agent local state
 .claude/settings.local.json
@@ -26,3 +26,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Agent reports & changelog (local only)
+/.claude/context/

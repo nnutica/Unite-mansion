@@ -8,9 +8,10 @@
 
 | โฟลเดอร์ | ไฟล์ | ใช้เมื่อ |
 | --- | --- | --- |
-| `Claude/Backend-doc/` | `context.md` | business rule, invariant, API convention, โครงสร้างโค้ด · **อ่านก่อนเริ่มทุก task** |
-| `Claude/Frontend-doc/` | `b_mansion_frontend_handoff_specification_dev.md` (v1.1) | หน้าจอ, route, modal, DoD ฝั่ง frontend |
-| `Claude/Frontend-doc/` | `DESIGN.md` | design token (อ่าน "B Mansion Overrides" ก่อน) |
+| `.claude/Backend-doc/` | `context.md` | business rule, invariant, API convention, โครงสร้างโค้ด · **อ่านก่อนเริ่มทุก task** |
+| `.claude/Backend-doc/` | `plan.md` | แผนงานทุก Phase + คำถามค้างก่อนเริ่มแต่ละ Phase |
+| `.claude/Frontend-doc/` | `b_mansion_frontend_handoff_specification_dev.md` (v1.1) | หน้าจอ, route, modal, DoD ฝั่ง frontend |
+| `.claude/Frontend-doc/` | `DESIGN.md` | design token (อ่าน "B Mansion Overrides" ก่อน) |
 
 - ถ้าเอกสารที่ต้องใช้ไม่อยู่ในสองโฟลเดอร์นี้ ให้หยุดถาม ห้ามเดาเนื้อหา
 - ถ้าเจอไฟล์ชื่อซ้ำหรือสำเนาของเอกสารเหล่านี้ที่อื่น ให้ถือว่าเป็นของเก่า และแจ้งผู้ใช้
@@ -19,6 +20,9 @@
 
 **Stack:** Go + Gin, REST + OpenAPI (contract-first), pgx + sqlc, PostgreSQL (Neon), Cloudflare R2 · Vite + React + TypeScript + MUI  
 เรื่องขั้นตอนการทำงาน ให้ยึดไฟล์นี้ · เรื่อง business rule ให้ยึด `Backend-doc/context.md`
+
+**Repo layout:** monorepo `.claude/` (ไฟล์นี้ + เอกสาร + report) · `backend/` (Go module, path เช่น `cmd/api`, `internal/...` นับจากที่นี่) · `frontend/` · `.claude/Backend-doc/`, `.claude/Frontend-doc/` และ `.claude/context/` ไม่ push ขึ้น git  
+**Local DB:** `backend/docker-compose.yml` (host port 7432) · tools รันด้วย `go tool -modfile=tools/go.mod <oapi-codegen|sqlc|goose>` จากใน `backend/`
 
 ---
 
@@ -29,7 +33,7 @@
 1. **เขียนแผนสั้นๆ ก่อน** — จะแตะไฟล์ไหน แก้ยังไง กระทบอะไร (ระบุ bounded context, aggregate และ invariant ที่เกี่ยว เช่น `billing` / `Invoice` / INV-3) แล้วค่อยเขียนโค้ด
 2. **หยุดและถามผู้ใช้ทุกครั้งที่มีทางเลือกจริงมากกว่าหนึ่งทาง** ห้ามเดาแล้วทำต่อเอง เช่น:
    - กฎหรือฟีเจอร์ที่ `context.md` ไม่ได้ระบุ หรือ Handoff / DESIGN.md ขัดกับ `context.md`
-   - ต้องเปลี่ยน `api/openapi.yaml` ที่ frontend ใช้อยู่แล้ว
+   - ต้องเปลี่ยน `backend/api/openapi.yaml` ที่ frontend ใช้อยู่แล้ว
    - ต้องแก้ migration ที่รันไปแล้ว (ให้เขียน migration ใหม่แทน)
    - จะแก้ของใน `internal/shared`, `internal/platform` หรือ component กลางฝั่ง frontend ที่หลายส่วนใช้ หรือแก้เฉพาะจุด
    - ต้องเรียกหรือเขียนข้าม bounded context ในแบบที่ `context.md` หัวข้อ 4 ไม่อนุญาต
@@ -57,7 +61,7 @@
 
 ## 4. Frontend guardrails (React)
 
-- Type และ API client มาจาก `api/openapi.yaml` เท่านั้น ห้ามเขียน type ซ้ำเอง
+- Type และ API client มาจาก `backend/api/openapi.yaml` เท่านั้น ห้ามเขียน type ซ้ำเอง
 - ห้ามคำนวณยอดเงินที่บันทึกฝั่ง frontend (preview ใน `P-A04` ได้)
 - ทำตาม DoD ใน Handoff v1.1 หัวข้อ 6
 
@@ -74,7 +78,7 @@
 2. **No blind-guessing fixes.** Before writing a single line of a fix, state explicitly: which file/line you're looking at, and what the relevant variables/parameters actually hold at that point in execution (เช่น ค่า `status` ของ `Invoice`, `meterDigits` ของห้อง, query ที่ sqlc สร้าง, payload ที่ client ส่ง).
 3. **No random log spamming.** Don't scatter `log.Printf` / `fmt.Println` / `slog.Debug` (Go) or `console.log` (React) just to "see what happens". If instrumentation is genuinely needed, add at most **two** targeted logs at a time, each tagged with the unique prefix `[DBG-9nut]`, and remove every one of them before calling the task done (ตรวจด้วย `grep -rn "DBG-9nut"` ก่อนปิดงาน).
 4. **Read the whole chain before proposing a fix.** For bugs crossing a layer or async boundary, read every file in that chain — don't fix based only on where the error surfaced if the root cause is upstream. Chain ของโปรเจคนี้:
-   - React page → hook / API client ที่ generate จาก OpenAPI → `api/openapi.yaml`
+   - React page → hook / API client ที่ generate จาก OpenAPI → `backend/api/openapi.yaml`
    - Gin handler (`adapter/http`) → use case (`app`) → aggregate (`domain`) → repository (`adapter/postgres`, sqlc) → Postgres (Neon)
    - Upload: client → presigned URL endpoint → R2 → endpoint ยืนยันไฟล์
    - Domain event → handler (เช่น `audit`, `communication`) ภายใน transaction เดียวกัน

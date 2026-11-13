@@ -1,4 +1,21 @@
 # One block per bounded context: queries in db/queries/<context>/, output to
 # internal/<context>/adapter/postgres/sqlcgen. Run: go generate ./...
 version: "2"
-sql: []
+overrides:
+  go:
+    overrides:
+      - db_type: uuid
+        go_type: github.com/google/uuid.UUID
+      - db_type: pg_catalog.numeric
+        go_type: github.com/shopspring/decimal.Decimal
+      - db_type: timestamptz
+        go_type: time.Time
+sql:
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries/audit
+    gen:
+      go:
+        package: sqlcgen
+        out: internal/audit/adapter/postgres/sqlcgen
+        sql_package: pgx/v5
